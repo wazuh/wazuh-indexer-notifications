@@ -29,13 +29,7 @@ on:
         required: false
 
 jobs:
-  Get-CI-Image-Tag:
-    uses: opensearch-project/opensearch-build/.github/workflows/get-ci-image-tag.yml@main
-    with:
-      product: opensearch
-
   build-linux:
-    needs: Get-CI-Image-Tag
     strategy:
       # This setting says that all jobs should finish, even if one fails
       fail-fast: false
