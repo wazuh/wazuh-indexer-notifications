@@ -1,0 +1,86 @@
+##
+ # Copyright OpenSearch Contributors
+ # SPDX-License-Identifier: Apache-2.0
+##
+ 
+name: Test and Build Notifications
+
+on:
+  workflow_call:
+    inputs:
+      revision:
+        description: "Revision"
+        type: string
+        default: "0"
+      id:
+        description: "ID used to identify the workflow uniquely."
+        required: false
+        type: string
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: "Revision"
+        type: string
+        default: "0"
+      id:
+        description: "ID used to identify the workflow uniquely."
+        type: string
+        required: false
+
+jobs:
+  build-linux:
+    strategy:
+      # This setting says that all jobs should finish, even if one fails
+      fail-fast: false
+      matrix:
+        java: [21, 25]
+        os:
+          - ubuntu-24.04-arm  # arm64-preview
+          - ubuntu-24.04  # x64
+
+    # Job name
+    name: Build Notifications with JDK ${{ matrix.java }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin # Temurin is a distribution of adoptium
+          java-version: ${{ matrix.java }}
+
+      # notifications
+      - name: Checkout Notifications
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: echo "version=$(jq -r '.version' VERSION.json)" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Build with Gradle
+        run: |
+          cd notifications
+          ./gradlew build "-Dversion=${{ steps.version.outputs.version }}" "-Dbuild.revision=${{ inputs.revision }}"
+        env:
+          _JAVA_OPTIONS: ${{ matrix.os_java_options }}
+
+      - name: Create Artifact Path
+        run: |
+          mkdir -p notifications-build/{notifications,notifications-core}
+          cp -r ./notifications/notifications/build/distributions/*.zip notifications-build/notifications/
+          cp -r ./notifications/core/build/distributions/*.zip notifications-build/notifications-core/
+        shell: bash
+
+      - name: Upload Artifacts for notifications plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: notifications-plugin-${{ matrix.os }}-JDK${{ matrix.java }}
+          path: notifications-build/notifications
+
+      - name: Upload Artifacts for notifications-core plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: notifications-core-plugin-${{ matrix.os }}-JDK${{ matrix.java }}
+          path: notifications-build/notifications-core
