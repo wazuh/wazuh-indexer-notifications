@@ -16,6 +16,7 @@ import org.opensearch.commons.notifications.action.GetNotificationConfigRequest
 import org.opensearch.commons.notifications.action.GetNotificationConfigResponse
 import org.opensearch.commons.notifications.action.UpdateNotificationConfigRequest
 import org.opensearch.commons.notifications.action.UpdateNotificationConfigResponse
+import org.opensearch.commons.notifications.model.ActiveResponse // Wazuh
 import org.opensearch.commons.notifications.model.Channel
 import org.opensearch.commons.notifications.model.ChannelList
 import org.opensearch.commons.notifications.model.Chime
@@ -84,6 +85,26 @@ object ConfigIndexingActions {
     @Suppress("UnusedPrivateMember")
     private fun validateWebhookConfig(webhook: Webhook, user: User?) {
         // TODO: URL validation with rules
+    }
+
+    @Suppress("UnusedPrivateMember")
+    private fun validateActiveConfig(activeResponse: ActiveResponse, user: User?) {
+        require(activeResponse.type == "stateful" || activeResponse.type == "stateless") {
+            "Wrong ActiveResponse type. Should be either stateful or stateless"
+        }
+        require(activeResponse.location == "local" || activeResponse.location == "defined-agent" || activeResponse.location == "all") {
+            "Wrong ActiveResponse location. Should be either local, defined-agent, or all"
+        }
+        if (activeResponse.location == "defined-agent") {
+            require(activeResponse.agent_id?.matches(Regex("^\\d+$")) == true) {
+                "agent_id must contain only numeric characters when location is defined-agent"
+            }
+        }
+        if (activeResponse.type == "stateful") {
+            require((activeResponse.stateful_timeout ?: 0) > 0) {
+                "stateful_timeout must be greater than 0 for stateful type"
+            }
+        }
     }
 
     @Suppress("UnusedPrivateMember")
@@ -186,6 +207,7 @@ object ConfigIndexingActions {
             ConfigType.SES_ACCOUNT -> validateSesAccountConfig(config.configData as SesAccount, user)
             ConfigType.EMAIL_GROUP -> validateEmailGroupConfig(config.configData as EmailGroup, user)
             ConfigType.SNS -> validateSnsConfig(config.configData as Sns, user)
+            ConfigType.ACTIVE_RESPONSE -> validateActiveConfig(config.configData as ActiveResponse, user)
         }
     }
 

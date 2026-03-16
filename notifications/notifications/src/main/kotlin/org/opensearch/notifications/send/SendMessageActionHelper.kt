@@ -20,6 +20,7 @@ import org.opensearch.commons.notifications.action.LegacyPublishNotificationRequ
 import org.opensearch.commons.notifications.action.LegacyPublishNotificationResponse
 import org.opensearch.commons.notifications.action.SendNotificationRequest
 import org.opensearch.commons.notifications.action.SendNotificationResponse
+import org.opensearch.commons.notifications.model.ActiveResponse
 import org.opensearch.commons.notifications.model.ChannelMessage
 import org.opensearch.commons.notifications.model.Chime
 import org.opensearch.commons.notifications.model.ConfigType
@@ -47,6 +48,7 @@ import org.opensearch.notifications.model.NotificationConfigDocInfo
 import org.opensearch.notifications.security.UserAccess
 import org.opensearch.notifications.spi.model.DestinationMessageResponse
 import org.opensearch.notifications.spi.model.MessageContent
+import org.opensearch.notifications.spi.model.destination.ActiveResponseDestination
 import org.opensearch.notifications.spi.model.destination.BaseDestination
 import org.opensearch.notifications.spi.model.destination.ChimeDestination
 import org.opensearch.notifications.spi.model.destination.CustomWebhookDestination
@@ -249,6 +251,7 @@ object SendMessageActionHelper {
             ConfigType.SMTP_ACCOUNT -> null
             ConfigType.EMAIL_GROUP -> null
             ConfigType.SNS -> sendSNSMessage(configData as Sns, message, eventStatus, eventSource.referenceId)
+            ConfigType.ACTIVE_RESPONSE -> sendActiveResponseMessage(configData as ActiveResponse, message, eventStatus, eventSource.referenceId)
         }
         return if (response == null) {
             log.warn("Cannot send message to destination for config id :${channel.docInfo.id}")
@@ -257,6 +260,29 @@ object SendMessageActionHelper {
         } else {
             response
         }
+    }
+
+    /**
+     * TODO: Add a document to an index as a trigger
+     */
+    private fun sendActiveResponseMessage(
+        activeResponse: ActiveResponse,
+        message: MessageContent,
+        eventStatus: EventStatus,
+        referenceId: String
+    ): EventStatus {
+        Metrics.NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE.counter.increment()
+        val destination = ActiveResponseDestination(
+            // name = activeResponse.name,
+            type = activeResponse.type,
+            stateful_timeout = activeResponse.stateful_timeout,
+            executable = activeResponse.executable,
+            extra_args = activeResponse.extra_args,
+            location = activeResponse.location,
+            agent_id = activeResponse.agent_id
+        )
+        val status = sendMessageThroughSpi(destination, message, referenceId)
+        return eventStatus.copy(deliveryStatus = DeliveryStatus(status.statusCode.toString(), status.statusText))
     }
 
     /**
