@@ -48,7 +48,6 @@ import org.opensearch.notifications.model.NotificationConfigDocInfo
 import org.opensearch.notifications.security.UserAccess
 import org.opensearch.notifications.spi.model.DestinationMessageResponse
 import org.opensearch.notifications.spi.model.MessageContent
-import org.opensearch.notifications.spi.model.destination.ActiveResponseDestination
 import org.opensearch.notifications.spi.model.destination.BaseDestination
 import org.opensearch.notifications.spi.model.destination.ChimeDestination
 import org.opensearch.notifications.spi.model.destination.CustomWebhookDestination
@@ -68,10 +67,12 @@ object SendMessageActionHelper {
 
     private lateinit var configOperations: ConfigOperations
     private lateinit var userAccess: UserAccess
+    private lateinit var client: org.opensearch.notifications.util.SecureIndexClient
 
-    fun initialize(configOperations: ConfigOperations, userAccess: UserAccess) {
+    fun initialize(configOperations: ConfigOperations, userAccess: UserAccess, client: org.opensearch.transport.client.Client) {
         this.configOperations = configOperations
         this.userAccess = userAccess
+        this.client = org.opensearch.notifications.util.SecureIndexClient(client)
     }
 
     /**
@@ -251,7 +252,7 @@ object SendMessageActionHelper {
             ConfigType.SMTP_ACCOUNT -> null
             ConfigType.EMAIL_GROUP -> null
             ConfigType.SNS -> sendSNSMessage(configData as Sns, message, eventStatus, eventSource.referenceId)
-            ConfigType.ACTIVE_RESPONSE -> sendActiveResponseMessage(configData as ActiveResponse, message, eventStatus, eventSource.referenceId)
+            ConfigType.ACTIVE_RESPONSE -> sendActiveResponseMessage(configData as ActiveResponse, message, eventStatus, eventSource)
         }
         return if (response == null) {
             log.warn("Cannot send message to destination for config id :${channel.docInfo.id}")
@@ -267,22 +268,53 @@ object SendMessageActionHelper {
      */
     private fun sendActiveResponseMessage(
         activeResponse: ActiveResponse,
-        message: MessageContent,
+        _message: MessageContent,
         eventStatus: EventStatus,
-        referenceId: String
+        eventSource: EventSource
     ): EventStatus {
         Metrics.NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE.counter.increment()
-        val destination = ActiveResponseDestination(
-            // name = activeResponse.name,
-            type = activeResponse.type,
-            stateful_timeout = activeResponse.stateful_timeout,
-            executable = activeResponse.executable,
-            extra_args = activeResponse.extra_args,
-            location = activeResponse.location,
-            agent_id = activeResponse.agent_id
-        )
-        val status = sendMessageThroughSpi(destination, message, referenceId)
-        return eventStatus.copy(deliveryStatus = DeliveryStatus(status.statusCode.toString(), status.statusText))
+        log.info("$LOG_PREFIX:sendActiveResponseMessage eventSource=$eventSource")
+        return try {
+            val currentTimeMilli = java.time.Instant.now().toEpochMilli()
+
+            val builder = org.opensearch.common.xcontent.XContentFactory.jsonBuilder()
+            builder.startObject()
+            builder.field("timestamp", currentTimeMilli)
+            builder.field("event_data")
+            builder.startObject()
+            builder.field("title", eventSource.title)
+            builder.field("reference_id", eventSource.referenceId)
+            builder.field("severity", eventSource.severity)
+            builder.field("tags", eventSource.tags)
+            builder.endObject()
+
+            builder.field("wazuh")
+            builder.startObject()
+            builder.field("active_response")
+            builder.startObject()
+            builder.field("type", activeResponse.type)
+            builder.field("stateful_timeout", activeResponse.stateful_timeout)
+            builder.field("executable", activeResponse.executable)
+            builder.field("extra_args", activeResponse.extra_args)
+            builder.field("location", activeResponse.location)
+            builder.field("agent_id", activeResponse.agent_id)
+            builder.endObject()
+            builder.endObject()
+            builder.endObject()
+
+            val indexRequest = org.opensearch.action.index.IndexRequest(".active_response")
+                .source(builder)
+            client.index(indexRequest)
+            eventStatus.copy(deliveryStatus = DeliveryStatus(RestStatus.OK.status.toString(), "Active response indexed"))
+        } catch (exception: Exception) {
+            log.error("$LOG_PREFIX:Failed to index active response to .active_response", exception)
+            eventStatus.copy(
+                deliveryStatus = DeliveryStatus(
+                    RestStatus.FAILED_DEPENDENCY.status.toString(),
+                    "Failed to index active response"
+                )
+            )
+        }
     }
 
     /**
