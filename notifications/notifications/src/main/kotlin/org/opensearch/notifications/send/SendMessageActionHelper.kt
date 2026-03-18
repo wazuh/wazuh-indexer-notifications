@@ -273,13 +273,22 @@ object SendMessageActionHelper {
         eventSource: EventSource
     ): EventStatus {
         Metrics.NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE.counter.increment()
-        log.info("$LOG_PREFIX:sendActiveResponseMessage eventSource=$eventSource")
+        /* Get the docId and indexName that is passed in the textDescription of the message using the template {{ctx.alerts.0.related_doc_ids}}
+            example: document_id|indexName
+        */
+        val parts = _message.textDescription.split("|")
+        val docId = parts[0]
+        val indexName = parts[1]
+
         return try {
             val currentTimeMilli = java.time.Instant.now().toEpochMilli()
 
             val builder = org.opensearch.common.xcontent.XContentFactory.jsonBuilder()
             builder.startObject()
             builder.field("timestamp", currentTimeMilli)
+            builder.field("event").startObject()
+            builder.field("id", docId)
+            builder.field("index", indexName).endObject()
             builder.field("event_data")
             builder.startObject()
             builder.field("title", eventSource.title)
