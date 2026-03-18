@@ -252,7 +252,7 @@ object SendMessageActionHelper {
             ConfigType.SMTP_ACCOUNT -> null
             ConfigType.EMAIL_GROUP -> null
             ConfigType.SNS -> sendSNSMessage(configData as Sns, message, eventStatus, eventSource.referenceId)
-            ConfigType.ACTIVE_RESPONSE -> sendActiveResponseMessage(configData as ActiveResponse, message, eventStatus, eventSource)
+            ConfigType.ACTIVE_RESPONSE -> sendActiveResponseMessage(configData as ActiveResponse, channel.configDoc.config.name, message, eventStatus, eventSource.referenceId)
         }
         return if (response == null) {
             log.warn("Cannot send message to destination for config id :${channel.docInfo.id}")
@@ -264,59 +264,70 @@ object SendMessageActionHelper {
     }
 
     /**
-     * TODO: Add a document to an index as a trigger
+     * Add active response trigger document to index.
      */
     private fun sendActiveResponseMessage(
         activeResponse: ActiveResponse,
+        channelName: String,
         _message: MessageContent,
         eventStatus: EventStatus,
-        eventSource: EventSource
+        referenceId: String
     ): EventStatus {
-        Metrics.NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE.counter.increment()
-        /* Get the docId and indexName that is passed in the textDescription of the message using the template {{ctx.alerts.0.related_doc_ids}}
-            example: document_id|indexName
-        */
-        val parts = _message.textDescription.split("|")
-        val docId = parts[0]
-        val indexName = parts[1]
-
+        val indexDestination = "wazuh-active-responses"
         return try {
-            val currentTimeMilli = java.time.Instant.now().toEpochMilli()
+            Metrics.NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE.counter.increment()
+            /* Get the docId and indexName that is passed in the textDescription of the message using the template {{ctx.alerts.0.related_doc_ids}}
+                example: document_id|indexName
+            */
+            val parts = _message.textDescription.split("|", limit = 2)
+            if (parts.size < 2 || parts[0].isBlank() || parts[1].isBlank()) {
+                return eventStatus.copy(
+                    deliveryStatus = DeliveryStatus(
+                        RestStatus.BAD_REQUEST.status.toString(),
+                        "Invalid active response payload. Expected format: docId|indexName"
+                    )
+                )
+            }
+            val docId = parts[0]
+            val indexName = parts[1]
 
-            val builder = org.opensearch.common.xcontent.XContentFactory.jsonBuilder()
-            builder.startObject()
-            builder.field("timestamp", currentTimeMilli)
-            builder.field("event").startObject()
-            builder.field("id", docId)
-            builder.field("index", indexName).endObject()
-            builder.field("event_data")
-            builder.startObject()
-            builder.field("title", eventSource.title)
-            builder.field("reference_id", eventSource.referenceId)
-            builder.field("severity", eventSource.severity)
-            builder.field("tags", eventSource.tags)
-            builder.endObject()
+            // Retrieve the source document from the specified index and docId, and enrich it with active response information before indexing to the destination index
+            val sourceDocument = getSourceDocument(docId, indexName)
+            val documentToIndex = sourceDocument.toMutableMap()
 
-            builder.field("wazuh")
-            builder.startObject()
-            builder.field("active_response")
-            builder.startObject()
-            builder.field("type", activeResponse.type)
-            builder.field("stateful_timeout", activeResponse.stateful_timeout)
-            builder.field("executable", activeResponse.executable)
-            builder.field("extra_args", activeResponse.extra_args)
-            builder.field("location", activeResponse.location)
-            builder.field("agent_id", activeResponse.agent_id)
-            builder.endObject()
-            builder.endObject()
-            builder.endObject()
+            // Add timestamp and event information to the document before indexing to the destination index
+            documentToIndex["@timestamp"] = java.time.Instant.now().toString()
 
-            val indexRequest = org.opensearch.action.index.IndexRequest(".active_response")
-                .source(builder)
+            documentToIndex["event"] = mapOf(
+                "doc_id" to docId,
+                "index" to indexName
+            )
+
+            val wazuhMap = (documentToIndex["wazuh"] as? Map<*, *>)
+                ?.entries
+                ?.associate { it.key.toString() to it.value }
+                ?.toMutableMap()
+                ?: mutableMapOf()
+
+            val activeResponseMap = mutableMapOf<String, Any?>()
+            activeResponseMap["name"] = channelName
+            activeResponseMap["type"] = activeResponse.type
+            activeResponseMap["stateful_timeout"] = activeResponse.stateful_timeout
+            activeResponseMap["executable"] = activeResponse.executable
+            activeResponseMap["extra_arguments"] = activeResponse.extra_args
+            activeResponseMap["location"] = activeResponse.location
+            activeResponseMap["agent_id"] = activeResponse.agent_id
+            wazuhMap["active_response"] = activeResponseMap
+            documentToIndex["wazuh"] = wazuhMap
+
+            log.debug("$LOG_PREFIX:sendActiveResponseMessage Indexing document to $indexDestination: $documentToIndex")
+            val indexRequest = org.opensearch.action.index.IndexRequest(indexDestination)
+                .source(documentToIndex)
             client.index(indexRequest)
+            log.info("$LOG_PREFIX:sendActiveResponseMessage Successfully indexed active response to $indexDestination for docId: $docId, indexName: $indexName")
             eventStatus.copy(deliveryStatus = DeliveryStatus(RestStatus.OK.status.toString(), "Active response indexed"))
         } catch (exception: Exception) {
-            log.error("$LOG_PREFIX:Failed to index active response to .active_response", exception)
+            log.error("$LOG_PREFIX:sendActiveResponseMessage Failed to index active response to $indexDestination", exception)
             eventStatus.copy(
                 deliveryStatus = DeliveryStatus(
                     RestStatus.FAILED_DEPENDENCY.status.toString(),
@@ -324,6 +335,21 @@ object SendMessageActionHelper {
                 )
             )
         }
+    }
+
+    // Wazuh
+    private fun getSourceDocument(docId: String, indexName: String): Map<String, Any?> {
+        val getRequest = org.opensearch.action.get.GetRequest(indexName, docId)
+        val getResponse = client.get(getRequest).actionGet()
+
+        if (!getResponse.isExists || getResponse.sourceAsMap == null) {
+            throw OpenSearchStatusException(
+                "Document with id [$docId] not found in index [$indexName]",
+                RestStatus.NOT_FOUND
+            )
+        }
+
+        return getResponse.sourceAsMap
     }
 
     /**
