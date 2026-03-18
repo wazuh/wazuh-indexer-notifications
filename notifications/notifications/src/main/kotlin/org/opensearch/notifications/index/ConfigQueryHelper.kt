@@ -14,7 +14,7 @@ import org.opensearch.commons.notifications.NotificationConstants.DESCRIPTION_TA
 import org.opensearch.commons.notifications.NotificationConstants.EMAIL_ACCOUNT_ID_TAG
 import org.opensearch.commons.notifications.NotificationConstants.EMAIL_GROUP_ID_LIST_TAG
 import org.opensearch.commons.notifications.NotificationConstants.EXECUTABLE_TAG // Wazuh
-import org.opensearch.commons.notifications.NotificationConstants.EXTRA_ARGS // Wazuh
+import org.opensearch.commons.notifications.NotificationConstants.EXTRA_ARGS_TAG // Wazuh
 import org.opensearch.commons.notifications.NotificationConstants.FROM_ADDRESS_TAG
 import org.opensearch.commons.notifications.NotificationConstants.HOST_TAG
 import org.opensearch.commons.notifications.NotificationConstants.IS_ENABLED_TAG
@@ -88,7 +88,7 @@ object ConfigQueryHelper {
         // Wazuh
         "${ACTIVE_RESPONSE.tag}.$AGENT_ID_TAG.$KEYWORD_SUFFIX",
         "${ACTIVE_RESPONSE.tag}.$EXECUTABLE_TAG.$KEYWORD_SUFFIX",
-        "${ACTIVE_RESPONSE.tag}.$EXTRA_ARGS.$KEYWORD_SUFFIX",
+        "${ACTIVE_RESPONSE.tag}.$EXTRA_ARGS_TAG.$KEYWORD_SUFFIX",
         "${ACTIVE_RESPONSE.tag}.$LOCATION_TAG.$KEYWORD_SUFFIX",
         "${ACTIVE_RESPONSE.tag}.$STATEFUL_TIMEOUT_TAG.$KEYWORD_SUFFIX",
         "${ACTIVE_RESPONSE.tag}.$TYPE_TAG.$KEYWORD_SUFFIX"
@@ -109,7 +109,7 @@ object ConfigQueryHelper {
         // Wazuh
         "${ACTIVE_RESPONSE.tag}.$AGENT_ID_TAG",
         "${ACTIVE_RESPONSE.tag}.$EXECUTABLE_TAG",
-        "${ACTIVE_RESPONSE.tag}.$EXTRA_ARGS",
+        "${ACTIVE_RESPONSE.tag}.$EXTRA_ARGS_TAG",
         "${ACTIVE_RESPONSE.tag}.$LOCATION_TAG",
         "${ACTIVE_RESPONSE.tag}.$STATEFUL_TIMEOUT_TAG",
         "${ACTIVE_RESPONSE.tag}.$TYPE_TAG"
