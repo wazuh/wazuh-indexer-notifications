@@ -291,40 +291,40 @@ object SendMessageActionHelper {
             val docId = parts[0]
             val indexName = parts[1]
 
-            // Retrieve the source document from the specified index and docId, and enrich it with active response information before indexing to the destination index
+            // Retrieve only the wazuh sub-fields allowed by the strict mapping of wazuh-active-responses.
+            // Do NOT copy the entire source document — index-specific fields (e.g. 'file' in wazuh-states-fim-files)
+            // are not mapped here and would cause a StrictDynamicMappingException.
             val sourceDocument = getSourceDocument(docId, indexName)
-            val documentToIndex = sourceDocument.toMutableMap()
-
-            // Add timestamp and event information to the document before indexing to the destination index
-            documentToIndex["@timestamp"] = java.time.Instant.now().toString()
-
-            documentToIndex["event"] = mapOf(
-                "doc_id" to docId,
-                "index" to indexName
-            )
-
-            val wazuhMap = (documentToIndex["wazuh"] as? Map<*, *>)
+            val allowedWazuhKeys = setOf("agent", "cluster", "integration", "protocol", "schema", "space")
+            val wazuhMap = (sourceDocument["wazuh"] as? Map<*, *>)
                 ?.entries
+                ?.filter { it.key.toString() in allowedWazuhKeys }
                 ?.associate { it.key.toString() to it.value }
                 ?.toMutableMap()
                 ?: mutableMapOf()
 
-            val activeResponseMap = mutableMapOf<String, Any?>()
-            activeResponseMap["name"] = channelName
-            activeResponseMap["type"] = activeResponse.type
-            activeResponseMap["stateful_timeout"] = activeResponse.stateful_timeout
-            activeResponseMap["executable"] = activeResponse.executable
-            activeResponseMap["extra_arguments"] = activeResponse.extra_args
-            activeResponseMap["location"] = activeResponse.location
-            activeResponseMap["agent_id"] = activeResponse.agent_id
-            wazuhMap["active_response"] = activeResponseMap
-            documentToIndex["wazuh"] = wazuhMap
+            wazuhMap["active_response"] = mapOf(
+                "name" to channelName,
+                "type" to activeResponse.type,
+                "stateful_timeout" to activeResponse.stateful_timeout,
+                "executable" to activeResponse.executable,
+                "extra_arguments" to activeResponse.extra_args,
+                "location" to activeResponse.location,
+                "agent_id" to activeResponse.agent_id
+            )
+
+            val documentToIndex = mapOf(
+                "@timestamp" to java.time.Instant.now().toString(),
+                "event" to mapOf("doc_id" to docId, "index" to indexName),
+                "wazuh" to wazuhMap
+            )
 
             log.debug("$LOG_PREFIX:sendActiveResponseMessage Indexing document to $indexDestination: $documentToIndex")
             val indexRequest = org.opensearch.action.index.IndexRequest(indexDestination)
+                .opType(org.opensearch.action.DocWriteRequest.OpType.CREATE)
                 .source(documentToIndex)
-            client.index(indexRequest)
-            log.info("$LOG_PREFIX:sendActiveResponseMessage Successfully indexed active response to $indexDestination for docId: $docId, indexName: $indexName")
+            val indexResponse = client.index(indexRequest).actionGet()
+            log.info("$LOG_PREFIX:sendActiveResponseMessage Successfully indexed active response to $indexDestination for docId: $docId, indexName: $indexName, result: ${indexResponse.result}")
             eventStatus.copy(deliveryStatus = DeliveryStatus(RestStatus.OK.status.toString(), "Active response indexed"))
         } catch (exception: Exception) {
             log.error("$LOG_PREFIX:sendActiveResponseMessage Failed to index active response to $indexDestination", exception)
