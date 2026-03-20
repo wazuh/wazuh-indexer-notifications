@@ -6,15 +6,19 @@ package org.opensearch.notifications.index
 
 import org.apache.lucene.search.join.ScoreMode
 import org.opensearch.OpenSearchStatusException
+import org.opensearch.commons.notifications.NotificationConstants.AGENT_ID_TAG // Wazuh
 import org.opensearch.commons.notifications.NotificationConstants.CONFIG_TAG
 import org.opensearch.commons.notifications.NotificationConstants.CONFIG_TYPE_TAG
 import org.opensearch.commons.notifications.NotificationConstants.CREATED_TIME_TAG
 import org.opensearch.commons.notifications.NotificationConstants.DESCRIPTION_TAG
 import org.opensearch.commons.notifications.NotificationConstants.EMAIL_ACCOUNT_ID_TAG
 import org.opensearch.commons.notifications.NotificationConstants.EMAIL_GROUP_ID_LIST_TAG
+import org.opensearch.commons.notifications.NotificationConstants.EXECUTABLE_TAG // Wazuh
+import org.opensearch.commons.notifications.NotificationConstants.EXTRA_ARGS_TAG // Wazuh
 import org.opensearch.commons.notifications.NotificationConstants.FROM_ADDRESS_TAG
 import org.opensearch.commons.notifications.NotificationConstants.HOST_TAG
 import org.opensearch.commons.notifications.NotificationConstants.IS_ENABLED_TAG
+import org.opensearch.commons.notifications.NotificationConstants.LOCATION_TAG // Wazuh
 import org.opensearch.commons.notifications.NotificationConstants.METHOD_TAG
 import org.opensearch.commons.notifications.NotificationConstants.NAME_TAG
 import org.opensearch.commons.notifications.NotificationConstants.QUERY_TAG
@@ -22,9 +26,12 @@ import org.opensearch.commons.notifications.NotificationConstants.RECIPIENT_LIST
 import org.opensearch.commons.notifications.NotificationConstants.RECIPIENT_TAG
 import org.opensearch.commons.notifications.NotificationConstants.REGION_TAG
 import org.opensearch.commons.notifications.NotificationConstants.ROLE_ARN_TAG
+import org.opensearch.commons.notifications.NotificationConstants.STATEFUL_TIMEOUT_TAG // Wazuh
 import org.opensearch.commons.notifications.NotificationConstants.TOPIC_ARN_TAG
+import org.opensearch.commons.notifications.NotificationConstants.TYPE_TAG // Wazuh
 import org.opensearch.commons.notifications.NotificationConstants.UPDATED_TIME_TAG
 import org.opensearch.commons.notifications.NotificationConstants.URL_TAG
+import org.opensearch.commons.notifications.model.ConfigType.ACTIVE_RESPONSE // Wazuh
 import org.opensearch.commons.notifications.model.ConfigType.CHIME
 import org.opensearch.commons.notifications.model.ConfigType.EMAIL
 import org.opensearch.commons.notifications.model.ConfigType.EMAIL_GROUP
@@ -77,7 +84,14 @@ object ConfigQueryHelper {
         "${SNS.tag}.$TOPIC_ARN_TAG.$KEYWORD_SUFFIX",
         "${SNS.tag}.$ROLE_ARN_TAG.$KEYWORD_SUFFIX",
         "${SES_ACCOUNT.tag}.$ROLE_ARN_TAG.$KEYWORD_SUFFIX",
-        "${SES_ACCOUNT.tag}.$FROM_ADDRESS_TAG.$KEYWORD_SUFFIX"
+        "${SES_ACCOUNT.tag}.$FROM_ADDRESS_TAG.$KEYWORD_SUFFIX",
+        // Wazuh
+        "${ACTIVE_RESPONSE.tag}.$AGENT_ID_TAG.$KEYWORD_SUFFIX",
+        "${ACTIVE_RESPONSE.tag}.$EXECUTABLE_TAG.$KEYWORD_SUFFIX",
+        "${ACTIVE_RESPONSE.tag}.$EXTRA_ARGS_TAG.$KEYWORD_SUFFIX",
+        "${ACTIVE_RESPONSE.tag}.$LOCATION_TAG.$KEYWORD_SUFFIX",
+        "${ACTIVE_RESPONSE.tag}.$STATEFUL_TIMEOUT_TAG.$KEYWORD_SUFFIX",
+        "${ACTIVE_RESPONSE.tag}.$TYPE_TAG.$KEYWORD_SUFFIX"
     )
     private val TEXT_FIELDS = setOf(
         NAME_TAG,
@@ -91,7 +105,14 @@ object ConfigQueryHelper {
         "${SNS.tag}.$TOPIC_ARN_TAG",
         "${SNS.tag}.$ROLE_ARN_TAG",
         "${SES_ACCOUNT.tag}.$ROLE_ARN_TAG",
-        "${SES_ACCOUNT.tag}.$FROM_ADDRESS_TAG"
+        "${SES_ACCOUNT.tag}.$FROM_ADDRESS_TAG",
+        // Wazuh
+        "${ACTIVE_RESPONSE.tag}.$AGENT_ID_TAG",
+        "${ACTIVE_RESPONSE.tag}.$EXECUTABLE_TAG",
+        "${ACTIVE_RESPONSE.tag}.$EXTRA_ARGS_TAG",
+        "${ACTIVE_RESPONSE.tag}.$LOCATION_TAG",
+        "${ACTIVE_RESPONSE.tag}.$STATEFUL_TIMEOUT_TAG",
+        "${ACTIVE_RESPONSE.tag}.$TYPE_TAG"
     )
     private val NESTED_KEYWORD_FIELDS = setOf(
         // Text fields with keyword
