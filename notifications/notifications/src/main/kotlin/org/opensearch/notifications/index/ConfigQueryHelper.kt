@@ -162,7 +162,7 @@ object ConfigQueryHelper {
 
     private fun getQueryAllBuilder(queryValue: String): QueryBuilder {
         val boolQuery = QueryBuilders.boolQuery()
-        val allQuery = QueryBuilders.queryStringQuery(queryValue)
+        val allQuery = QueryBuilders.queryStringQuery(queryValue).lenient(true) // Wazuh: Set lenient to true to avoid query failure when user input doesn't match the field type, e.g. text query on numeric field.
         // Searching on metadata field is not supported. skip adding METADATA_FIELDS
         CONFIG_FIELDS.forEach {
             allQuery.field("$KEY_PREFIX.$it")
@@ -170,7 +170,7 @@ object ConfigQueryHelper {
         boolQuery.should(allQuery)
         NESTED_PATHS.forEach { path ->
             run {
-                val allNestedQuery = QueryBuilders.queryStringQuery(queryValue)
+                val allNestedQuery = QueryBuilders.queryStringQuery(queryValue).lenient(true) // Wazuh: Set lenient to true to avoid query failure when user input doesn't match the field type, e.g. text query on numeric field.
                 val fields = NESTED_FIELDS.filter { it.startsWith(path) }
                 fields.forEach {
                     allNestedQuery.field("$KEY_PREFIX.$it")
@@ -179,12 +179,13 @@ object ConfigQueryHelper {
                 boolQuery.should(nestedFieldQuery)
             }
         }
+
         return boolQuery
     }
 
     private fun getTextQueryAllBuilder(queryValue: String): QueryBuilder {
         val boolQuery = QueryBuilders.boolQuery()
-        val allQuery = QueryBuilders.queryStringQuery(queryValue)
+        val allQuery = QueryBuilders.queryStringQuery(queryValue).lenient(true) // Wazuh: Set lenient to true to avoid query failure when user input doesn't match the field type, e.g. text query on numeric field.
         // Searching on metadata field is not supported. skip adding METADATA_FIELDS
         TEXT_FIELDS.forEach {
             allQuery.field("$KEY_PREFIX.$it")
@@ -192,7 +193,7 @@ object ConfigQueryHelper {
         boolQuery.should(allQuery)
         NESTED_PATHS.forEach { path ->
             run {
-                val allNestedQuery = QueryBuilders.queryStringQuery(queryValue)
+                val allNestedQuery = QueryBuilders.queryStringQuery(queryValue).lenient(true) // Wazuh: Set lenient to true to avoid query failure when user input doesn't match the field type, e.g. text query on numeric field.
                 val fields = NESTED_TEXT_FIELDS.filter { it.startsWith(path) }
                 fields.forEach {
                     allNestedQuery.field("$KEY_PREFIX.$it")
