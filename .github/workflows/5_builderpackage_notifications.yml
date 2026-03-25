@@ -29,6 +29,23 @@ on:
         required: false
 
 jobs:
+  branches:
+    runs-on: ubuntu-24.04
+    outputs:
+      common_utils_ref: ${{ steps.resolve.outputs.wazuh_indexer_common_utils_branch }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve branches
+        id: resolve
+        uses: wazuh/wazuh-indexer/.github/actions/5_builderpackage_indexer_branch_resolver@main
+        with:
+          branch: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+
+      - name: Display resolved branches
+        run: |
+          echo "Common Utils branch: ${{ steps.resolve.outputs.wazuh_indexer_common_utils_branch }}"
+
   get-version:
     runs-on: ubuntu-24.04
     outputs:
@@ -41,12 +58,12 @@ jobs:
 
   common-utils-maven-local-publication:
     runs-on: ubuntu-24.04
-    needs: [get-version]
+    needs: [branches, get-version]
     steps:
       - name: Publish common-utils to Local Maven
         uses: wazuh/wazuh-indexer-common-utils/.github/actions/5_local_maven_publisher@1-initialize-common-utils
         with:
-          reference: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          reference: ${{ needs.branches.outputs.common_utils_ref }}
       - name: Cache Maven Local
         uses: actions/cache/save@v5
         with:
