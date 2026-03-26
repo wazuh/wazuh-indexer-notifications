@@ -1,12 +1,11 @@
-##
- # Copyright OpenSearch Contributors
- # SPDX-License-Identifier: Apache-2.0
-##
- 
-name: Test and Build Notifications
+run-name: Build Wazuh Indexer Notifications plugin | ${{ inputs.id }}
+name: (5.x) Build packages
 
+# This workflow runs when any of the following occur:
+# - Run manually
+# - Invoked from another workflow
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       revision:
         description: "Revision"
@@ -14,10 +13,9 @@ on:
         default: "0"
       id:
         description: "ID used to identify the workflow uniquely."
-        required: false
         type: string
-  pull_request:
-  workflow_dispatch:
+        required: false
+  workflow_call:
     inputs:
       revision:
         description: "Revision"
@@ -29,7 +27,53 @@ on:
         required: false
 
 jobs:
-  build-linux:
+  branches:
+    runs-on: ubuntu-24.04
+    outputs:
+      common_utils_ref: ${{ steps.resolve.outputs.wazuh_indexer_common_utils_branch }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve branches
+        id: resolve
+        uses: wazuh/wazuh-indexer/.github/actions/5_builderpackage_indexer_branch_resolver@main
+        with:
+          branch: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+
+      - name: Display resolved branches
+        run: |
+          echo "Common Utils branch: ${{ steps.resolve.outputs.wazuh_indexer_common_utils_branch }}"
+
+  get-version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Get version
+        id: version
+        run: echo "version=$(jq -r .version<VERSION.json)" >> "$GITHUB_OUTPUT"
+
+  publish-common-utils:
+    runs-on: ubuntu-24.04
+    needs: [branches, get-version]
+    steps:
+      - name: Publish common-utils to Maven Local
+        uses: wazuh/wazuh-indexer-common-utils/.github/actions/5_local_maven_publisher@main
+        with:
+          reference: ${{ needs.branches.outputs.common_utils_ref }}
+      - name: Cache Maven Local
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.m2/repository
+          key: maven-common-utils-${{ github.ref_name }}
+
+  build:
+    needs: [get-version, publish-common-utils]
+    if: |
+      always() &&
+      needs.get-version.result == 'success' &&
+      needs.publish-common-utils.result == 'success'
     strategy:
       # This setting says that all jobs should finish, even if one fails
       fail-fast: false
@@ -54,17 +98,16 @@ jobs:
       - name: Checkout Notifications
         uses: actions/checkout@v6
 
-      - name: Get version
-        id: version
-        run: echo "version=$(jq -r '.version' VERSION.json)" >> "$GITHUB_OUTPUT"
-        shell: bash
+      - name: Restore Maven Local Cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.m2/repository
+          key: maven-common-utils-${{ github.ref_name }}
 
       - name: Build with Gradle
         run: |
           cd notifications
-          ./gradlew build "-Dversion=${{ steps.version.outputs.version }}" "-Dbuild.revision=${{ inputs.revision }}"
-        env:
-          _JAVA_OPTIONS: ${{ matrix.os_java_options }}
+          ./gradlew build "-Dversion=${{ needs.get-version.outputs.version }}" "-Dbuild.revision=${{ inputs.revision }}"
 
       - name: Create Artifact Path
         run: |
