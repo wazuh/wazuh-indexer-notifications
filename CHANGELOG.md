@@ -5,7 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased 5.0.x]
 ### Added
-- Initialize repository.
+- Initialize repository. [(#2)](https://github.com/wazuh/wazuh-indexer-notifications/issues/2)
+- Implement wazuh-indexer-common-utils usage [(#17)](https://github.com/wazuh/wazuh-indexer-notifications/pull/17)
 
 ### Dependencies
 -
