@@ -1,7 +1,11 @@
+run-name: Build Wazuh Indexer Notifications plugin | ${{ inputs.id }}
 name: (5.x) Build packages
 
+# This workflow runs when any of the following occur:
+# - Run manually
+# - Invoked from another workflow
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       revision:
         description: "Revision"
@@ -9,10 +13,9 @@ on:
         default: "0"
       id:
         description: "ID used to identify the workflow uniquely."
-        required: false
         type: string
-  pull_request:
-  workflow_dispatch:
+        required: false
+  workflow_call:
     inputs:
       revision:
         description: "Revision"
@@ -55,17 +58,17 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [branches, get-version]
     steps:
-      - name: Publish common-utils to Local Maven
-        uses: wazuh/wazuh-indexer-common-utils/.github/actions/5_local_maven_publisher@1-initialize-common-utils
+      - name: Publish common-utils to Maven Local
+        uses: wazuh/wazuh-indexer-common-utils/.github/actions/5_local_maven_publisher@main
         with:
           reference: ${{ needs.branches.outputs.common_utils_ref }}
       - name: Cache Maven Local
         uses: actions/cache/save@v5
         with:
           path: ~/.m2/repository
-          key: maven-common-utils-${{ github.run_id }}
+          key: maven-common-utils-${{ github.ref_name }}
 
-  build-linux:
+  build:
     needs: [get-version, publish-common-utils]
     if: |
       always() &&
@@ -99,7 +102,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ~/.m2/repository
-          key: maven-common-utils-${{ github.run_id }}
+          key: maven-common-utils-${{ github.ref_name }}
 
       - name: Build with Gradle
         run: |
