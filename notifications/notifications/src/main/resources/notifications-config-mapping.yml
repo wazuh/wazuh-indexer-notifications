@@ -143,3 +143,38 @@ properties:
                 fields:
                   keyword:
                     type: keyword
+      active_response: # active response configuration
+        type: object
+        properties:
+          # name: # TODO: remove if this field is not finally needed since it can be obtained when sending the "active response" event to the index
+          #   type: text
+          #   fields:
+          #     keyword:
+          #       type: keyword
+          executable:
+            type: text
+            fields:
+              keyword:
+                type: keyword
+          extra_args:
+            type: text
+            fields:
+              keyword:
+                type: keyword
+          location:
+            type: text
+            fields:
+              keyword:
+                type: keyword
+          agent_id:
+            type: text
+            fields:
+              keyword:
+                type: keyword
+          type:
+            type: text
+            fields:
+              keyword:
+                type: keyword
+          stateful_timeout:
+            type: integer

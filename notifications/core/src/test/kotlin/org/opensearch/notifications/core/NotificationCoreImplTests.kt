@@ -20,7 +20,8 @@ class NotificationCoreImplTests {
         "sns",
         "ses_account",
         "smtp_account",
-        "email_group"
+        "email_group",
+        "active_response"
     )
     private val defaultConfigFeatures = listOf(
         "alerting",
