@@ -50,6 +50,10 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            VERSION.json
       - name: Get version
         id: version
         run: echo "version=$(jq -r .version<VERSION.json)" >> "$GITHUB_OUTPUT"
@@ -58,22 +62,29 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [branches, get-version]
     steps:
-      - name: Publish common-utils to Maven Local
+      - name: Restore Maven Local Cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.m2/repository
+          key: m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-${{ needs.get-version.outputs.version }}-r${{ inputs.revision }}
+          restore-keys: |
+            m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-
+            m2-common-utils-${{ github.ref_name }}-
+
+      - name: Publish to Maven Local
         uses: wazuh/wazuh-indexer-common-utils/.github/actions/5_local_maven_publisher@main
         with:
+          version: ${{ needs.get-version.outputs.version }}
+          revision: ${{ inputs.revision }}
           reference: ${{ needs.branches.outputs.common_utils_ref }}
       - name: Cache Maven Local
         uses: actions/cache/save@v5
         with:
           path: ~/.m2/repository
-          key: maven-common-utils-${{ github.ref_name }}
+          key: m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-${{ needs.get-version.outputs.version }}-r${{ inputs.revision }}
 
   build:
-    needs: [get-version, publish-common-utils]
-    if: |
-      always() &&
-      needs.get-version.result == 'success' &&
-      needs.publish-common-utils.result == 'success'
+    needs: [branches, get-version, publish-common-utils]
     strategy:
       # This setting says that all jobs should finish, even if one fails
       fail-fast: false
@@ -102,7 +113,10 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ~/.m2/repository
-          key: maven-common-utils-${{ github.ref_name }}
+          key: m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-${{ needs.get-version.outputs.version }}-r${{ inputs.revision }}
+          restore-keys: |
+            m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-
+            m2-common-utils-${{ github.ref_name }}-
 
       - name: Build with Gradle
         run: |

@@ -16,6 +16,7 @@ import org.opensearch.commons.notifications.action.GetNotificationConfigRequest
 import org.opensearch.commons.notifications.action.GetNotificationConfigResponse
 import org.opensearch.commons.notifications.action.UpdateNotificationConfigRequest
 import org.opensearch.commons.notifications.action.UpdateNotificationConfigResponse
+import org.opensearch.commons.notifications.model.ActiveResponse
 import org.opensearch.commons.notifications.model.Channel
 import org.opensearch.commons.notifications.model.ChannelList
 import org.opensearch.commons.notifications.model.Chime
@@ -170,6 +171,11 @@ object ConfigIndexingActions {
         // No extra validation required. All email IDs are validated as part of model validation.
     }
 
+    @Suppress("UnusedPrivateMember")
+    private fun validateActiveResponseConfig(activeResponse: ActiveResponse, user: User?) {
+        // TODO: validation with rules
+    }
+
     private suspend fun validateConfig(config: NotificationConfig, user: User?) {
         when (config.configType) {
             ConfigType.NONE -> throw OpenSearchStatusException(
@@ -186,6 +192,7 @@ object ConfigIndexingActions {
             ConfigType.SES_ACCOUNT -> validateSesAccountConfig(config.configData as SesAccount, user)
             ConfigType.EMAIL_GROUP -> validateEmailGroupConfig(config.configData as EmailGroup, user)
             ConfigType.SNS -> validateSnsConfig(config.configData as Sns, user)
+            ConfigType.ACTIVE_RESPONSE -> validateActiveResponseConfig(config.configData as ActiveResponse, user)
         }
     }
 
