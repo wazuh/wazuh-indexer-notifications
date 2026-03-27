@@ -96,13 +96,13 @@ object ConfigIndexingActions {
             "Wrong ActiveResponse location. Should be either local, defined-agent, or all"
         }
         if (activeResponse.location == "defined-agent") {
-            require(activeResponse.agent_id?.matches(Regex("^\\d+$")) == true) {
-                "agent_id must contain only numeric characters when location is defined-agent"
+            require(activeResponse.agentId?.matches(Regex("^\\d+$")) == true) {
+                "agentId must contain only numeric characters when location is defined-agent"
             }
         }
         if (activeResponse.type == "stateful") {
-            require((activeResponse.stateful_timeout ?: 0) > 0) {
-                "stateful_timeout must be greater than 0 for stateful type"
+            require((activeResponse.statefulTimeout ?: 0) > 0) {
+                "statefulTimeout must be greater than 0 for stateful type"
             }
         }
     }

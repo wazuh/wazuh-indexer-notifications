@@ -306,11 +306,11 @@ object SendMessageActionHelper {
             wazuhMap["active_response"] = mapOf(
                 "name" to channelName,
                 "type" to activeResponse.type,
-                "stateful_timeout" to activeResponse.stateful_timeout,
+                "stateful_timeout" to activeResponse.statefulTimeout,
                 "executable" to activeResponse.executable,
-                "extra_arguments" to activeResponse.extra_args,
+                "extra_arguments" to activeResponse.args,
                 "location" to activeResponse.location,
-                "agent_id" to activeResponse.agent_id
+                "agent_id" to activeResponse.agentId
             )
 
             val documentToIndex = mapOf(
