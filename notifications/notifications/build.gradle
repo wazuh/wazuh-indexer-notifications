@@ -77,6 +77,7 @@ publishing {
     }
 
     repositories {
+        mavenLocal() // TODO: remove when using the common-utils package from repository
         maven {
             name = "Snapshots"
             url = System.getenv("MAVEN_SNAPSHOTS_S3_REPO")
@@ -176,6 +177,12 @@ configurations.all {
 
 configurations {
     opensearchPlugin
+}
+
+// TODO: remove when using the common-utils package from repository
+repositories {
+    mavenLocal()
+    mavenCentral()
 }
 
 dependencies {

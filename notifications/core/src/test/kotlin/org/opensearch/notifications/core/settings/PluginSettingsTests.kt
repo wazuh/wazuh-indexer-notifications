@@ -63,7 +63,8 @@ internal class PluginSettingsTests {
                 "sns",
                 "ses_account",
                 "smtp_account",
-                "email_group"
+                "email_group",
+                "active_response"
             )
         )
         .put(tooltipSupportKey, true)
