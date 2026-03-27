@@ -1,0 +1,5 @@
+[2026-03-27 13:24:12] Logging initialized. Log file: /home/runner/work/wazuh-indexer-notifications/wazuh-indexer-notifications/tools/repository_bumper_2026-03-27_13-24-12-029.log
+[2026-03-27 13:24:12] Starting update for VERSION.json with version=5.0.0, stage=alpha0
+[2026-03-27 13:24:12] Moved to repository root: /home/runner/work/wazuh-indexer-notifications/wazuh-indexer-notifications
+[2026-03-27 13:24:12] Updated VERSION.json with version=5.0.0 and stage=alpha0
+[2026-03-27 13:24:12] Update complete.
