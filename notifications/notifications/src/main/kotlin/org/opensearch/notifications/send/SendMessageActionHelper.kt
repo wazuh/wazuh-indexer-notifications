@@ -249,6 +249,7 @@ object SendMessageActionHelper {
             ConfigType.SMTP_ACCOUNT -> null
             ConfigType.EMAIL_GROUP -> null
             ConfigType.SNS -> sendSNSMessage(configData as Sns, message, eventStatus, eventSource.referenceId)
+            ConfigType.ACTIVE_RESPONSE -> null
         }
         return if (response == null) {
             log.warn("Cannot send message to destination for config id :${channel.docInfo.id}")
