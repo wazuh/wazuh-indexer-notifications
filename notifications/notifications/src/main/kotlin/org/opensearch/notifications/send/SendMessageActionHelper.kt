@@ -20,6 +20,7 @@ import org.opensearch.commons.notifications.action.LegacyPublishNotificationRequ
 import org.opensearch.commons.notifications.action.LegacyPublishNotificationResponse
 import org.opensearch.commons.notifications.action.SendNotificationRequest
 import org.opensearch.commons.notifications.action.SendNotificationResponse
+import org.opensearch.commons.notifications.model.ActiveResponse
 import org.opensearch.commons.notifications.model.ChannelMessage
 import org.opensearch.commons.notifications.model.Chime
 import org.opensearch.commons.notifications.model.ConfigType
@@ -66,10 +67,12 @@ object SendMessageActionHelper {
 
     private lateinit var configOperations: ConfigOperations
     private lateinit var userAccess: UserAccess
+    private lateinit var client: org.opensearch.notifications.util.SecureIndexClient
 
-    fun initialize(configOperations: ConfigOperations, userAccess: UserAccess) {
+    fun initialize(configOperations: ConfigOperations, userAccess: UserAccess, client: org.opensearch.transport.client.Client) {
         this.configOperations = configOperations
         this.userAccess = userAccess
+        this.client = org.opensearch.notifications.util.SecureIndexClient(client)
     }
 
     /**
@@ -249,7 +252,7 @@ object SendMessageActionHelper {
             ConfigType.SMTP_ACCOUNT -> null
             ConfigType.EMAIL_GROUP -> null
             ConfigType.SNS -> sendSNSMessage(configData as Sns, message, eventStatus, eventSource.referenceId)
-            ConfigType.ACTIVE_RESPONSE -> null
+            ConfigType.ACTIVE_RESPONSE -> sendActiveResponseMessage(configData as ActiveResponse, channel.configDoc.config.name, message, eventStatus, eventSource.referenceId)
         }
         return if (response == null) {
             log.warn("Cannot send message to destination for config id :${channel.docInfo.id}")
@@ -258,6 +261,95 @@ object SendMessageActionHelper {
         } else {
             response
         }
+    }
+
+    /**
+     * Add active response trigger document to index.
+     */
+    private fun sendActiveResponseMessage(
+        activeResponse: ActiveResponse,
+        channelName: String,
+        _message: MessageContent,
+        eventStatus: EventStatus,
+        referenceId: String
+    ): EventStatus {
+        val indexDestination = "wazuh-active-responses"
+        return try {
+            Metrics.NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE.counter.increment()
+            /* Get the docId and indexName that is passed in the textDescription of the message using the template {{ctx.alerts.0.related_doc_ids}}
+                example: document_id|indexName
+            */
+            val parts = _message.textDescription.split("|", limit = 2)
+            if (parts.size < 2 || parts[0].isBlank() || parts[1].isBlank()) {
+                return eventStatus.copy(
+                    deliveryStatus = DeliveryStatus(
+                        RestStatus.BAD_REQUEST.status.toString(),
+                        "Invalid active response payload. Expected format: docId|indexName"
+                    )
+                )
+            }
+            val docId = parts[0]
+            val indexName = parts[1]
+
+            // Retrieve only the wazuh sub-fields allowed by the strict mapping of wazuh-active-responses.
+            // Do NOT copy the entire source document — index-specific fields (e.g. 'file' in wazuh-states-fim-files)
+            // are not mapped here and would cause a StrictDynamicMappingException.
+            val sourceDocument = getSourceDocument(docId, indexName)
+            val allowedWazuhKeys = setOf("agent", "cluster", "integration", "protocol", "schema", "space")
+            val wazuhMap = (sourceDocument["wazuh"] as? Map<*, *>)
+                ?.entries
+                ?.filter { it.key.toString() in allowedWazuhKeys }
+                ?.associate { it.key.toString() to it.value }
+                ?.toMutableMap()
+                ?: mutableMapOf()
+
+            wazuhMap["active_response"] = mapOf(
+                "name" to channelName,
+                "type" to activeResponse.type,
+                "stateful_timeout" to activeResponse.statefulTimeout,
+                "executable" to activeResponse.executable,
+                "extra_arguments" to activeResponse.args,
+                "location" to activeResponse.location,
+                "agent_id" to activeResponse.agentId
+            )
+
+            val documentToIndex = mapOf(
+                "@timestamp" to java.time.Instant.now().toString(),
+                "event" to mapOf("doc_id" to docId, "index" to indexName),
+                "wazuh" to wazuhMap
+            )
+
+            log.debug("$LOG_PREFIX:sendActiveResponseMessage Indexing document to $indexDestination: $documentToIndex")
+            val indexRequest = org.opensearch.action.index.IndexRequest(indexDestination)
+                .opType(org.opensearch.action.DocWriteRequest.OpType.CREATE)
+                .source(documentToIndex)
+            val indexResponse = client.index(indexRequest).actionGet()
+            log.info("$LOG_PREFIX:sendActiveResponseMessage Successfully indexed active response to $indexDestination for docId: $docId, indexName: $indexName, result: ${indexResponse.result}")
+            eventStatus.copy(deliveryStatus = DeliveryStatus(RestStatus.OK.status.toString(), "Active response indexed"))
+        } catch (exception: Exception) {
+            log.error("$LOG_PREFIX:sendActiveResponseMessage Failed to index active response to $indexDestination", exception)
+            eventStatus.copy(
+                deliveryStatus = DeliveryStatus(
+                    RestStatus.FAILED_DEPENDENCY.status.toString(),
+                    "Failed to index active response"
+                )
+            )
+        }
+    }
+
+    // Wazuh
+    private fun getSourceDocument(docId: String, indexName: String): Map<String, Any?> {
+        val getRequest = org.opensearch.action.get.GetRequest(indexName, docId)
+        val getResponse = client.get(getRequest).actionGet()
+
+        if (!getResponse.isExists || getResponse.sourceAsMap == null) {
+            throw OpenSearchStatusException(
+                "Document with id [$docId] not found in index [$indexName]",
+                RestStatus.NOT_FOUND
+            )
+        }
+
+        return getResponse.sourceAsMap
     }
 
     /**
