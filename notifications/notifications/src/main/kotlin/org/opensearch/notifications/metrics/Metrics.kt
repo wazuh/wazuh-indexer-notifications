@@ -213,6 +213,10 @@ enum class Metrics(val metricName: String, val counter: Counter<*>) {
         "notifications.message_destination.sns",
         BasicCounter()
     ),
+    NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE(
+        "notifications.message_destination.active_response",
+        BasicCounter()
+    ), // add specific user errors for send message operations
 
     // Send Test Message Endpoints
     // GET _plugins/_notifications/feature/test/{configId}

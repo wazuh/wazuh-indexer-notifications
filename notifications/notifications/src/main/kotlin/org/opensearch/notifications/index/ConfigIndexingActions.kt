@@ -88,6 +88,26 @@ object ConfigIndexingActions {
     }
 
     @Suppress("UnusedPrivateMember")
+    private fun validateActiveConfig(activeResponse: ActiveResponse, user: User?) {
+        require(activeResponse.type == "stateful" || activeResponse.type == "stateless") {
+            "Wrong ActiveResponse type. Should be either stateful or stateless"
+        }
+        require(activeResponse.location == "local" || activeResponse.location == "defined-agent" || activeResponse.location == "all") {
+            "Wrong ActiveResponse location. Should be either local, defined-agent, or all"
+        }
+        if (activeResponse.location == "defined-agent") {
+            require(activeResponse.agentId?.matches(Regex("^\\d+$")) == true) {
+                "agentId must contain only numeric characters when location is defined-agent"
+            }
+        }
+        if (activeResponse.type == "stateful") {
+            require((activeResponse.statefulTimeout ?: 0) > 0) {
+                "statefulTimeout must be greater than 0 for stateful type"
+            }
+        }
+    }
+
+    @Suppress("UnusedPrivateMember")
     private fun validateSnsConfig(sns: Sns, user: User?) {
         // TODO: URL validation with rules
     }
