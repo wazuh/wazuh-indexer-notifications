@@ -16,10 +16,53 @@ set -euo pipefail
 # Print usage instructions
 # ====
 function usage() {
-    echo "Usage: $0 <version> <stage>"
-    echo "  version:  The new version to set in VERSION.json (e.g., 4.5.0)"
-    echo "  stage:    The new stage to set in VERSION.json (alpha, beta, rc, stable)"
+    echo "Usage: $0 [--set-as-main] <version> <stage>"
+    echo "  --set-as-main  Enable main branch mode: bump version values only, keep branch references pointing to main"
+    echo "  version:       The new version to set in VERSION.json (e.g., 4.5.0)"
+    echo "  stage:         The new stage to set in VERSION.json (alpha, beta, rc, stable)"
     exit 1
+}
+
+# ====
+# Parse arguments
+# Globals:
+#   version
+#   stage
+#   set_as_main
+#   skip_urls
+# ====
+function parse_args() {
+    set_as_main=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --set-as-main)
+                set_as_main="yes"
+                shift 1
+                ;;
+            -*)
+                log "Error: Unknown option '$1'."
+                usage
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+    if [[ $# -ne 2 ]]; then
+        log "Error: Invalid number of positional arguments. Expected 2, got $#."
+        usage
+    fi
+
+    version="$1"
+    stage="$2"
+
+    if [[ -n "$set_as_main" ]]; then
+        skip_urls="yes"
+    else
+        skip_urls="no"
+    fi
 }
 
 # ====
@@ -130,16 +173,10 @@ function update_version_file() {
 # Main logic
 # ====
 function main() {
-    if [ "$#" -ne 2 ]; then
-        log "Error: Invalid number of arguments. Expected 2, got $#."
-        usage
-    fi
-
-    local version="$1"
-    local stage="$2"
+    parse_args "$@"
 
     init_logging
-    log "Starting update for VERSION.json with version=$version, stage=$stage"
+    log "Starting update for VERSION.json with version=$version, stage=$stage, set_as_main=${set_as_main:-no}"
 
     navigate_to_project_root
     check_jq_installed
