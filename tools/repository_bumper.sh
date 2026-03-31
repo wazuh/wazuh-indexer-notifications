@@ -8,6 +8,7 @@
 # It takes three arguments:
 # 1. The new version to set (e.g., 4.5.0)
 # 2. The new stage to set (alpha, beta, rc, stable)
+# 3. --set-as-main (optional): bump version values only, keep branch references pointing to main
 #
 
 set -euo pipefail
@@ -145,7 +146,6 @@ function main() {
     local version="$1"
     local stage="$2"
     local set_as_main=""
-    local skip_urls="no"
 
     shift 2
     while [[ $# -gt 0 ]]; do
@@ -161,32 +161,14 @@ function main() {
         esac
     done
 
-    if [[ -n "$set_as_main" ]]; then
-        log "Main branch mode enabled: version values will be updated but branch references will remain pointing to main."
-        skip_urls="yes"
-    else
-        log "Freeze mode: version values and branch references will both be updated."
-        skip_urls="no"
-    fi
-
     init_logging
+
     log "Starting update for VERSION.json with version=$version, stage=$stage"
 
     navigate_to_project_root
     check_jq_installed
     validate_inputs "$version" "$stage"
     update_version_file "$version" "$stage"
-
-    # Replace 'main' branch references with the version string (freeze mode only)
-    # NOTE: This repository currently has no branch/URL reference replacements.
-    # If such references are added in the future, place the sed commands here.
-    #
-    # Example:
-    #   sed -Ei "s/(some_field:\s*)main/\1${version}/g" path/to/file
-    if [[ "$skip_urls" != "yes" ]]; then
-        log "No branch/URL reference replacements defined for this repository. Skipping."
-    fi
-
     log "Update complete."
 }
 
