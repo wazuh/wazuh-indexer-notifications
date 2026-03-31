@@ -308,7 +308,7 @@ object SendMessageActionHelper {
                 "type" to activeResponse.type,
                 "stateful_timeout" to activeResponse.statefulTimeout,
                 "executable" to activeResponse.executable,
-                "extra_arguments" to activeResponse.args,
+                "extra_arguments" to activeResponse.args?.ifBlank { null },
                 "location" to activeResponse.location,
                 "agent_id" to activeResponse.agentId
             )
