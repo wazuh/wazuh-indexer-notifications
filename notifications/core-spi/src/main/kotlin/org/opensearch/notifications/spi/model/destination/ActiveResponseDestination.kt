@@ -13,12 +13,10 @@ class ActiveResponseDestination(
     val type: String,
     val stateful_timeout: Int? = null,
     val executable: String,
-    extra_args: String? = null,
+    val extra_args: String? = null,
     val location: String,
     val agent_id: String? = null
 ) : BaseDestination(DestinationType.ACTIVE_RESPONSE) {
-
-    val extra_args: String? = extra_args?.ifBlank { null }
 
     init {
 
