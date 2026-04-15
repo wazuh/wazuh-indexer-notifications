@@ -29,4 +29,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Security
 -
 
-[Unreleased 5.0.x]: https://github.com/wazuh/wazuh-indexer-notifications/compare/main...main
+[Unreleased 5.0.x]: https://github.com/wazuh/wazuh-indexer-notifications/compare/0ea5fdda7f430a0efe11b9465ad4c3d4f2a3776e...main
