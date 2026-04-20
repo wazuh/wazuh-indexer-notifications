@@ -52,7 +52,6 @@ opensearchplugin {
 publishing {
     publications {
         pluginZip(MavenPublication) { publication ->
-            artifactId = "wazuh-indexer-notifications"
             pom {
                 name = "wazuh-indexer-notifications"
                 description = "Wazuh Indexer Notifications Plugin"
