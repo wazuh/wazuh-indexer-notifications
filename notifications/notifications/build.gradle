@@ -55,7 +55,7 @@ publishing {
             pom {
                 name = "wazuh-indexer-notifications"
                 description = "Wazuh Indexer Notifications Plugin"
-                groupId = "org.opensearch.plugin"
+                groupId = "com.wazuh"
                 licenses {
                     license {
                         name = "The Apache License, Version 2.0"
@@ -181,7 +181,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly "${group}:opensearch:${opensearch_version}"
+    compileOnly "org.opensearch:opensearch:${opensearch_version}"
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-common:${kotlin_version}"
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.3") {
@@ -267,6 +267,12 @@ es_tmp_dir.mkdirs()
 // Will need to do a deep dive to find out exactly what task adds the sample-extension-plugin and add notification-core there but a temporary hack is to
 // reorder the plugins list after evaluation but prior to task execution when the plugins are installed.
 afterEvaluate {
+    if (tasks.findByName('publishNebulaPublicationToMavenLocal') && tasks.findByName('generatePomFileForPluginZipPublication')) {
+        tasks.named('publishNebulaPublicationToMavenLocal').configure {
+            dependsOn tasks.named('generatePomFileForPluginZipPublication')
+        }
+    }
+
     testClusters.integTest.nodes.each { node ->
         def plugins = node.plugins
         def firstPlugin = plugins.get(0)

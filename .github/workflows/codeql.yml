@@ -133,7 +133,7 @@ jobs:
       - name: Build with Gradle
         run: |
           cd notifications
-          ./gradlew build -x test "-Dversion=${{ needs.get-version.outputs.version }}" "-Dbuild.revision=0"
+          ./gradlew build -x test "-Dversion=${{ needs.get-version.outputs.version }}" "-Drevision=0"
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
