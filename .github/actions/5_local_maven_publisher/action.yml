@@ -1,0 +1,30 @@
+name: "Notifications - Publish to Local Maven"
+description: "Publishes wazuh-indexer-notifications artifacts to a local Maven repository."
+inputs:
+  version:
+    description: "The version of the artifact to publish."
+    required: true
+  revision:
+    description: "The revision of the artifact to publish."
+    required: false
+    default: "0"
+  reference:
+    description: "The reference branch or tag for the build."
+    required: false
+    default: "main"
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v6
+      with:
+        repository: wazuh/wazuh-indexer-notifications
+        ref: ${{ inputs.reference }}
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: 25
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v6
+    - id: publish-notifications
+      shell: bash
+      run: cd notifications && ./gradlew publishToMavenLocal -x check -Dversion=${{ inputs.version }} -Drevision=${{ inputs.revision }}
