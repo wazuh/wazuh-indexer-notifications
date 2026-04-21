@@ -129,7 +129,7 @@ task ktlintFormat(type: JavaExec, group: "formatting") {
     jvmArgs "--add-opens=java.base/java.lang=ALL-UNNAMED"
 }
 
-project(':opensearch-notifications-core') {
+project(':wazuh-indexer-notifications-core') {
     tasks.matching { it.name == 'generatePomFileForPluginZipPublication' }.configureEach {
         mustRunAfter 'publishNebulaPublicationToMavenLocal'
     }
