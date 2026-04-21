@@ -121,7 +121,7 @@ jobs:
       - name: Build with Gradle
         run: |
           cd notifications
-          ./gradlew build "-Dversion=${{ needs.get-version.outputs.version }}" "-Dbuild.revision=${{ inputs.revision }}"
+          ./gradlew build "-Dversion=${{ needs.get-version.outputs.version }}" "-Drevision=${{ inputs.revision }}"
 
       - name: Create Artifact Path
         run: |
