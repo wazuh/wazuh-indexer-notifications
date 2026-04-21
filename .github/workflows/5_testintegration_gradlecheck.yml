@@ -45,14 +45,6 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [branches, get-version]
     steps:
-      - name: Restore Maven Local Cache
-        uses: actions/cache/restore@v5
-        with:
-          path: ~/.m2/repository
-          key: m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-${{ needs.get-version.outputs.version }}-r0
-          restore-keys: |
-            m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-
-            m2-common-utils-${{ github.ref_name }}-
       - name: Publish to Maven Local
         uses: wazuh/wazuh-indexer-common-utils/.github/actions/5_local_maven_publisher@main
         with:
@@ -63,7 +55,7 @@ jobs:
         uses: actions/cache/save@v5
         with:
           path: ~/.m2/repository
-          key: m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-${{ needs.get-version.outputs.version }}-r0
+          key: ${{ github.run_id }}-common-utils
 
   call-test-workflow:
     runs-on: ubuntu-24.04
@@ -79,10 +71,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ~/.m2/repository
-          key: m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-${{ needs.get-version.outputs.version }}-r0
-          restore-keys: |
-            m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-
-            m2-common-utils-${{ github.ref_name }}-
+          key: ${{ github.run_id }}-common-utils
 
       - name: Run Gradle check
         run: ./gradlew check
