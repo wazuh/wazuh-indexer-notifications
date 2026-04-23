@@ -34,8 +34,8 @@ ext {
 }
 
 opensearchplugin {
-    name 'opensearch-notifications-core'
-    description 'OpenSearch Notifications Core Plugin'
+    name 'wazuh-indexer-notifications-core'
+    description 'Wazuh Indexer Notifications Core Plugin'
     classname 'org.opensearch.notifications.core.NotificationCorePlugin'
 }
 
@@ -43,9 +43,8 @@ publishing {
     publications {
         pluginZip(MavenPublication) { publication ->
             pom {
-                name = "opensearch-notifications-core"
-                description = "OpenSearch Notifications Core Plugin"
-                groupId = "org.opensearch.plugin"
+                name = "wazuh-indexer-notifications-core"
+                description = "Wazuh Indexer Notifications Core Plugin"
                 licenses {
                     license {
                         name = "The Apache License, Version 2.0"
@@ -56,6 +55,10 @@ publishing {
                     developer {
                         name = "OpenSearch"
                         url = "https://github.com/opensearch-project/notifications"
+                    }
+                    developer {
+                        name = "Wazuh"
+                        url = "https://github.com/wazuh/wazuh-indexer-notifications"
                     }
                 }
             }
@@ -188,12 +191,18 @@ configurations {
 
 // This is afterEvaluate because the bundlePlugin ZIP task is updated afterEvaluate and changes the ZIP name to match the plugin name
 afterEvaluate {
+    if (tasks.findByName('publishNebulaPublicationToMavenLocal') && tasks.findByName('generatePomFileForPluginZipPublication')) {
+        tasks.named('publishNebulaPublicationToMavenLocal').configure {
+            dependsOn tasks.named('generatePomFileForPluginZipPublication')
+        }
+    }
+
     ospackage {
         packageName = "${name}"
         release = isSnapshot ? "0.1" : '1'
         version = "${project.version}" - "-SNAPSHOT"
 
-        into '/usr/share/opensearch/plugins'
+        into '/usr/share/wazuh-indexer/plugins'
         from(zipTree(bundlePlugin.archiveFile)) {
             into opensearchplugin.name
         }
@@ -204,17 +213,17 @@ afterEvaluate {
         dirMode 0755
 
         requires('opensearch-oss', versions.opensearch, EQUAL)
-        packager = 'Amazon'
-        vendor = 'Amazon'
+        packager = 'Wazuh'
+        vendor = 'Wazuh'
         os = 'LINUX'
         prefix '/usr'
 
         license 'ASL-2.0'
-        maintainer 'OpenSearch Team <opensearch@amazon.com>'
-        url 'https://opensearch.org/'
+        maintainer 'Wazuh <info@wazuh.com>'
+        url 'https://wazuh.com'
         summary '''
-         OpenSearch Notifications Core.
-         Reference documentation can be found at https://opendistro.github.io/for-elasticsearch-docs/. // TODO:MIGRATE
+         Wazuh Indexer Notifications Core.
+         Reference documentation can be found at https://documentation.wazuh.com/.
     '''.stripIndent().replace('\n', ' ').trim()
     }
 

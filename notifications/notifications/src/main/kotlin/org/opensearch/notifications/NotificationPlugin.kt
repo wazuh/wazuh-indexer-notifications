@@ -78,7 +78,7 @@ class NotificationPlugin : ActionPlugin, Plugin(), NotificationCoreExtension, Sy
         private val log by logger(NotificationPlugin::class.java)
 
         // Plugin main global constants
-        const val PLUGIN_NAME = "opensearch-notifications"
+        const val PLUGIN_NAME = "wazuh-indexer-notifications"
         const val LOG_PREFIX = "notifications"
         const val PLUGIN_BASE_URI = "/_plugins/_notifications"
 
@@ -137,7 +137,7 @@ class NotificationPlugin : ActionPlugin, Plugin(), NotificationCoreExtension, Sy
         PluginSettings.addSettingsUpdateConsumer(clusterService)
         NotificationConfigIndex.initialize(sdkClient, client, clusterService)
         ConfigIndexingActions.initialize(NotificationConfigIndex, UserAccessManager)
-        SendMessageActionHelper.initialize(NotificationConfigIndex, UserAccessManager)
+        SendMessageActionHelper.initialize(NotificationConfigIndex, UserAccessManager, client)
         return listOf(sdkClient)
     }
 

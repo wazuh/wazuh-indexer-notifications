@@ -9,6 +9,9 @@ buildscript {
         opensearch_version = System.getProperty("opensearch.version", "3.6.0-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
+        wazuh_version = System.getProperty("version", "5.0.0")
+        revision = System.getProperty("revision", "0")
+        
         // 3.0.0-SNAPSHOT -> 3.0.0.0-SNAPSHOT
         version_tokens = opensearch_version.tokenize('-')
         opensearch_build = version_tokens[0] + '.0'
@@ -20,7 +23,8 @@ buildscript {
             opensearch_build += "-SNAPSHOT"
         }
         opensearch_no_snapshot = opensearch_version.replace("-SNAPSHOT","")
-        common_utils_version = System.getProperty("common_utils.version", opensearch_build)
+        // Resolved from wazuh-indexer-common-utils via mavenLocal() (published in CI before build)
+        common_utils_version = System.getProperty("common_utils.version", "${wazuh_version}.${revision}")
         kotlin_version = System.getProperty("kotlin.version", "2.2.20")
         junit_version = System.getProperty("junit.version", "5.7.2")
         aws_version = System.getProperty("aws.version", "1.12.687")
@@ -60,7 +64,9 @@ apply plugin: 'io.gitlab.arturbosch.detekt'
 apply from: 'build-tools/merged-coverage.gradle'
 
 allprojects {
-    version = "${opensearch_build}"
+    // Package version format: <wazuh_version>.<revision>
+    // Example: 5.0.0.0
+    version = "${wazuh_version}" + ".${revision}"
 
     repositories {
         mavenLocal()
@@ -68,7 +74,7 @@ allprojects {
         maven { url "https://plugins.gradle.org/m2/" }
         maven { url "https://ci.opensearch.org/ci/dbc/snapshots/maven/" }
     }
-    group = "org.opensearch"
+    group = "com.wazuh"
 
     plugins.withId('java') {
         java {
@@ -123,7 +129,7 @@ task ktlintFormat(type: JavaExec, group: "formatting") {
     jvmArgs "--add-opens=java.base/java.lang=ALL-UNNAMED"
 }
 
-project(':opensearch-notifications-core') {
+project(':wazuh-indexer-notifications-core') {
     tasks.matching { it.name == 'generatePomFileForPluginZipPublication' }.configureEach {
         mustRunAfter 'publishNebulaPublicationToMavenLocal'
     }

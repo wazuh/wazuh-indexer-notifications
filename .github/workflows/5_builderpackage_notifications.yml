@@ -1,0 +1,143 @@
+run-name: Build Wazuh Indexer Notifications plugin | ${{ inputs.id }}
+name: (5.x) Build packages
+
+# This workflow runs when any of the following occur:
+# - Run manually
+# - Invoked from another workflow
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: "Revision"
+        type: string
+        default: "0"
+      id:
+        description: "ID used to identify the workflow uniquely."
+        type: string
+        required: false
+  workflow_call:
+    inputs:
+      revision:
+        description: "Revision"
+        type: string
+        default: "0"
+      id:
+        description: "ID used to identify the workflow uniquely."
+        type: string
+        required: false
+
+jobs:
+  branches:
+    runs-on: ubuntu-24.04
+    outputs:
+      common_utils_ref: ${{ steps.resolve.outputs.wazuh_indexer_common_utils_branch }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve branches
+        id: resolve
+        uses: wazuh/wazuh-indexer/.github/actions/5_builderpackage_indexer_branch_resolver@main
+        with:
+          branch: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+
+      - name: Display resolved branches
+        run: |
+          echo "Common Utils branch: ${{ steps.resolve.outputs.wazuh_indexer_common_utils_branch }}"
+
+  get-version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            VERSION.json
+      - name: Get version
+        id: version
+        run: echo "version=$(jq -r .version<VERSION.json)" >> "$GITHUB_OUTPUT"
+
+  publish-common-utils:
+    runs-on: ubuntu-24.04
+    needs: [branches, get-version]
+    steps:
+      - name: Restore Maven Local Cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.m2/repository
+          key: m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-${{ needs.get-version.outputs.version }}-r${{ inputs.revision }}
+          restore-keys: |
+            m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-
+            m2-common-utils-${{ github.ref_name }}-
+
+      - name: Publish to Maven Local
+        uses: wazuh/wazuh-indexer-common-utils/.github/actions/5_local_maven_publisher@main
+        with:
+          version: ${{ needs.get-version.outputs.version }}
+          revision: ${{ inputs.revision }}
+          reference: ${{ needs.branches.outputs.common_utils_ref }}
+      - name: Cache Maven Local
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.m2/repository
+          key: m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-${{ needs.get-version.outputs.version }}-r${{ inputs.revision }}
+
+  build:
+    needs: [branches, get-version, publish-common-utils]
+    strategy:
+      # This setting says that all jobs should finish, even if one fails
+      fail-fast: false
+      matrix:
+        java: [21, 25]
+        os:
+          - ubuntu-24.04-arm  # arm64-preview
+          - ubuntu-24.04  # x64
+
+    # Job name
+    name: Build Notifications with JDK ${{ matrix.java }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin # Temurin is a distribution of adoptium
+          java-version: ${{ matrix.java }}
+
+      # notifications
+      - name: Checkout Notifications
+        uses: actions/checkout@v6
+
+      - name: Restore Maven Local Cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.m2/repository
+          key: m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-${{ needs.get-version.outputs.version }}-r${{ inputs.revision }}
+          restore-keys: |
+            m2-common-utils-${{ github.ref_name }}-${{ needs.branches.outputs.common_utils_ref }}-
+            m2-common-utils-${{ github.ref_name }}-
+
+      - name: Build with Gradle
+        run: |
+          cd notifications
+          ./gradlew build "-Dversion=${{ needs.get-version.outputs.version }}" "-Drevision=${{ inputs.revision }}"
+
+      - name: Create Artifact Path
+        run: |
+          mkdir -p notifications-build/{notifications,notifications-core}
+          cp -r ./notifications/notifications/build/distributions/*.zip notifications-build/notifications/
+          cp -r ./notifications/core/build/distributions/*.zip notifications-build/notifications-core/
+        shell: bash
+
+      - name: Upload Artifacts for notifications plugin
+        uses: actions/upload-artifact@v7
+        with:
+          name: notifications-plugin-${{ matrix.os }}-JDK${{ matrix.java }}
+          path: notifications-build/notifications
+
+      - name: Upload Artifacts for notifications-core plugin
+        uses: actions/upload-artifact@v7
+        with:
+          name: notifications-core-plugin-${{ matrix.os }}-JDK${{ matrix.java }}
+          path: notifications-build/notifications-core

@@ -43,19 +43,19 @@ def usingMultiNode = project.properties.containsKey('numNodes')
 check.dependsOn jacocoTestReport
 
 opensearchplugin {
-    name 'opensearch-notifications'
-    description 'OpenSearch Notifications Plugin'
+    name 'wazuh-indexer-notifications'
+    description 'Wazuh Indexer Notifications Plugin'
     classname 'org.opensearch.notifications.NotificationPlugin'
-    extendedPlugins = ['opensearch-notifications-core']
+    extendedPlugins = ['wazuh-indexer-notifications-core']
 }
 
 publishing {
     publications {
         pluginZip(MavenPublication) { publication ->
             pom {
-                name = "opensearch-notifications"
-                description = "OpenSearch Notifications Plugin"
-                groupId = "org.opensearch.plugin"
+                name = "wazuh-indexer-notifications"
+                description = "Wazuh Indexer Notifications Plugin"
+                groupId = "com.wazuh"
                 licenses {
                     license {
                         name = "The Apache License, Version 2.0"
@@ -67,12 +67,17 @@ publishing {
                         name = "OpenSearch"
                         url = "https://github.com/opensearch-project/notifications"
                     }
+                    developer {
+                        name = "Wazuh"
+                        url = "https://github.com/wazuh/wazuh-indexer-notifications"
+                    }
                 }
             }
         }
     }
 
     repositories {
+        mavenLocal() // TODO: remove when using the common-utils package from repository
         maven {
             name = "Snapshots"
             url = System.getenv("MAVEN_SNAPSHOTS_S3_REPO")
@@ -115,6 +120,16 @@ ext {
 
 configurations.testImplementation {
     exclude module: "securemock"
+}
+
+configurations.testRuntimeClasspath {
+    exclude group: 'org.bouncycastle', module: 'bcprov-jdk18on'
+}
+
+// Exclude BouncyCastle from the bundled plugin ZIP to avoid jar hell
+// with bc-fips already provided in the OpenSearch distribution lib/
+configurations.runtimeOnly {
+    exclude group: 'org.bouncycastle', module: 'bcprov-jdk18on'
 }
 
 configurations.all {
@@ -164,14 +179,20 @@ configurations {
     opensearchPlugin
 }
 
+// TODO: remove when using the common-utils package from repository
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
 dependencies {
-    compileOnly "${group}:opensearch:${opensearch_version}"
+    compileOnly "org.opensearch:opensearch:${opensearch_version}"
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-common:${kotlin_version}"
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.3") {
         exclude group: 'org.jetbrains', module: 'annotations' // resolve jarhell
     } // ${kotlin_version} does not work for coroutines
-    implementation "${group}:common-utils:${common_utils_version}"
+    implementation "com.wazuh:wazuh-indexer-common-utils:${common_utils_version}@jar"
     // TODO: change compile to implementation when the _local/stats API is supported
     compileOnly "org.json:json:20231013"
     compileOnly "com.github.wnameless.json:json-flattener:0.13.0"
@@ -252,6 +273,17 @@ es_tmp_dir.mkdirs()
 // Will need to do a deep dive to find out exactly what task adds the sample-extension-plugin and add notification-core there but a temporary hack is to
 // reorder the plugins list after evaluation but prior to task execution when the plugins are installed.
 afterEvaluate {
+    if (tasks.findByName('publishNebulaPublicationToMavenLocal') && tasks.findByName('generatePomFileForPluginZipPublication')) {
+        tasks.named('publishNebulaPublicationToMavenLocal').configure {
+            dependsOn tasks.named('generatePomFileForPluginZipPublication')
+        }
+    }
+
+    publishing.publications.named("pluginZip", MavenPublication).configure {
+        groupId = "com.wazuh"
+        artifactId = "wazuh-indexer-notifications"
+    }
+
     testClusters.integTest.nodes.each { node ->
         def plugins = node.plugins
         def firstPlugin = plugins.get(0)
@@ -587,7 +619,7 @@ afterEvaluate {
         release = isSnapshot ? "0.1" : '1'
         version = "${project.version}" - "-SNAPSHOT"
 
-        into '/usr/share/opensearch/plugins'
+        into '/usr/share/wazuh-indexer/plugins'
         from(zipTree(bundlePlugin.archiveFile)) {
             into opensearchplugin.name
         }
@@ -598,17 +630,17 @@ afterEvaluate {
         dirMode 0755
 
         requires('opensearch-oss', versions.opensearch, EQUAL)
-        packager = 'Amazon'
-        vendor = 'Amazon'
+        packager = 'Wazuh'
+        vendor = 'Wazuh'
         os = 'LINUX'
         prefix '/usr'
 
         license 'ASL-2.0'
-        maintainer 'OpenSearch Team <opensearch@amazon.com>'
-        url 'https://opensearch.org/'
+        maintainer 'Wazuh <info@wazuh.com>'
+        url 'https://wazuh.com'
         summary '''
-         OpenSearch Notifications.
-         Reference documentation can be found at https://opendistro.github.io/for-elasticsearch-docs/. // TODO:MIGRATE
+         Wazuh Indexer Notifications Plugin.
+         Reference documentation can be found at https://documentation.wazuh.com/.
     '''.stripIndent().replace('\n', ' ').trim()
     }
 
