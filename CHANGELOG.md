@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Implement wazuh-indexer-common-utils usage [(#17)](https://github.com/wazuh/wazuh-indexer-notifications/pull/17)
 - Add active response channel [(#7)](https://github.com/wazuh/wazuh-indexer-notifications/pull/7)
 - Add `--set-as-main` flag support to repository bumper [(#23)](https://github.com/wazuh/wazuh-indexer-notifications/pull/23)
+- Add revert bump functionality to repository bumper workflow [(#58)](https://github.com/wazuh/wazuh-indexer-notifications/pull/58)
 
 ### Dependencies
 -
