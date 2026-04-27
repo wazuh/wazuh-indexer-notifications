@@ -332,7 +332,7 @@ object SendMessageActionHelper {
                 .source(documentToIndex)
             activeResponseBulkIndexer.add(indexRequest)
             log.debug("$LOG_PREFIX:sendActiveResponseMessage Queued active response for docId=$docId indexName=$indexName")
-            eventStatus.copy(deliveryStatus = DeliveryStatus(RestStatus.ACCEPTED.status.toString(), "Active response queued for bulk indexing"))
+            eventStatus.copy(deliveryStatus = DeliveryStatus(RestStatus.OK.status.toString(), "Active response queued for bulk indexing"))
         } catch (exception: Exception) {
             log.error("$LOG_PREFIX:sendActiveResponseMessage Failed to prepare active response document for docId=$docId indexName=$indexName", exception)
             eventStatus.copy(

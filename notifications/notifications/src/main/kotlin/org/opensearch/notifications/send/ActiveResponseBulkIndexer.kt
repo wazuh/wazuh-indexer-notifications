@@ -22,10 +22,13 @@ import java.util.concurrent.TimeUnit
  * Accumulates Active Response [IndexRequest]s and flushes them as a single [BulkRequest]
  * either when [flushIntervalMs] elapses (timeout-based) or [maxActions] is reached.
  *
- * Uses [BulkProcessor.builder(Client, Listener)] so the flush is scheduled on the client's
- * own thread pool without spinning up unmanaged threads. The [SecureIndexClient] wrapper
- * ensures each bulk request runs without an inherited security context, consistent with
- * all other direct-index operations in this plugin.
+ * Uses the explicit-scheduler [BulkProcessor.builder] overload, passing the plugin's
+ * own [org.opensearch.threadpool.ThreadPool] as the flush/retry scheduler. The simpler
+ * `builder(Client, Listener)` overload spawns an unmanaged scheduler thread that is
+ * blocked by the OpenSearch SecurityManager, causing the flush timer to silently
+ * never fire. The [SecureIndexClient] wrapper ensures each bulk request runs without
+ * an inherited security context, consistent with all other direct-index operations
+ * in this plugin.
  */
 internal class ActiveResponseBulkIndexer(
     client: Client,
@@ -35,7 +38,13 @@ internal class ActiveResponseBulkIndexer(
 
     private val log by logger(ActiveResponseBulkIndexer::class.java)
 
-    private val bulkProcessor: BulkProcessor = BulkProcessor.builder(SecureIndexClient(client), BulkListener())
+    private val bulkProcessor: BulkProcessor = BulkProcessor.builder(
+        SecureIndexClient(client),
+        BulkListener(),
+        client.threadPool(),
+        client.threadPool(),
+        Runnable { /* no-op: BulkProcessor close hook */ }
+    )
         .setFlushInterval(TimeValue.timeValueMillis(flushIntervalMs))
         .setBulkActions(maxActions)
         .setConcurrentRequests(1)
