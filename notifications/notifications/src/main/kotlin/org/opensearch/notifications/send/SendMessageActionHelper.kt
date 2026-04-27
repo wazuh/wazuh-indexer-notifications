@@ -68,11 +68,18 @@ object SendMessageActionHelper {
     private lateinit var configOperations: ConfigOperations
     private lateinit var userAccess: UserAccess
     private lateinit var client: org.opensearch.notifications.util.SecureIndexClient
+    private lateinit var activeResponseBulkIndexer: ActiveResponseBulkIndexer
 
-    fun initialize(configOperations: ConfigOperations, userAccess: UserAccess, client: org.opensearch.transport.client.Client) {
+    internal fun initialize(
+        configOperations: ConfigOperations,
+        userAccess: UserAccess,
+        client: org.opensearch.transport.client.Client,
+        activeResponseBulkIndexer: ActiveResponseBulkIndexer
+    ) {
         this.configOperations = configOperations
         this.userAccess = userAccess
         this.client = org.opensearch.notifications.util.SecureIndexClient(client)
+        this.activeResponseBulkIndexer = activeResponseBulkIndexer
     }
 
     /**
@@ -264,7 +271,9 @@ object SendMessageActionHelper {
     }
 
     /**
-     * Add active response trigger document to index.
+     * Enqueues an active response trigger document into the bulk indexer.
+     * Returns [RestStatus.ACCEPTED] immediately; the document is flushed to
+     * [wazuh-active-responses] asynchronously by [ActiveResponseBulkIndexer].
      */
     private fun sendActiveResponseMessage(
         activeResponse: ActiveResponse,
@@ -273,24 +282,23 @@ object SendMessageActionHelper {
         eventStatus: EventStatus,
         referenceId: String
     ): EventStatus {
-        val indexDestination = "wazuh-active-responses"
-        return try {
-            Metrics.NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE.counter.increment()
-            /* Get the docId and indexName that is passed in the textDescription of the message using the template {{ctx.alerts.0.related_doc_ids}}
-                example: document_id|indexName
-            */
-            val parts = _message.textDescription.split("|", limit = 2)
-            if (parts.size < 2 || parts[0].isBlank() || parts[1].isBlank()) {
-                return eventStatus.copy(
-                    deliveryStatus = DeliveryStatus(
-                        RestStatus.BAD_REQUEST.status.toString(),
-                        "Invalid active response payload. Expected format: docId|indexName"
-                    )
+        Metrics.NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE.counter.increment()
+        /* Get the docId and indexName that is passed in the textDescription of the message using the template {{ctx.alerts.0.related_doc_ids}}
+            example: document_id|indexName
+        */
+        val parts = _message.textDescription.split("|", limit = 2)
+        if (parts.size < 2 || parts[0].isBlank() || parts[1].isBlank()) {
+            return eventStatus.copy(
+                deliveryStatus = DeliveryStatus(
+                    RestStatus.BAD_REQUEST.status.toString(),
+                    "Invalid active response payload. Expected format: docId|indexName"
                 )
-            }
-            val docId = parts[0]
-            val indexName = parts[1]
+            )
+        }
+        val docId = parts[0]
+        val indexName = parts[1]
 
+        return try {
             // Retrieve only the wazuh sub-fields allowed by the strict mapping of wazuh-active-responses.
             // Do NOT copy the entire source document — index-specific fields (e.g. 'file' in wazuh-states-fim-files)
             // are not mapped here and would cause a StrictDynamicMappingException.
@@ -319,19 +327,18 @@ object SendMessageActionHelper {
                 "wazuh" to wazuhMap
             )
 
-            log.debug("$LOG_PREFIX:sendActiveResponseMessage Indexing document to $indexDestination: $documentToIndex")
-            val indexRequest = org.opensearch.action.index.IndexRequest(indexDestination)
+            val indexRequest = org.opensearch.action.index.IndexRequest("wazuh-active-responses")
                 .opType(org.opensearch.action.DocWriteRequest.OpType.CREATE)
                 .source(documentToIndex)
-            val indexResponse = client.index(indexRequest).actionGet()
-            log.info("$LOG_PREFIX:sendActiveResponseMessage Successfully indexed active response to $indexDestination for docId: $docId, indexName: $indexName, result: ${indexResponse.result}")
-            eventStatus.copy(deliveryStatus = DeliveryStatus(RestStatus.OK.status.toString(), "Active response indexed"))
+            activeResponseBulkIndexer.add(indexRequest)
+            log.debug("$LOG_PREFIX:sendActiveResponseMessage Queued active response for docId=$docId indexName=$indexName")
+            eventStatus.copy(deliveryStatus = DeliveryStatus(RestStatus.ACCEPTED.status.toString(), "Active response queued for bulk indexing"))
         } catch (exception: Exception) {
-            log.error("$LOG_PREFIX:sendActiveResponseMessage Failed to index active response to $indexDestination", exception)
+            log.error("$LOG_PREFIX:sendActiveResponseMessage Failed to prepare active response document for docId=$docId indexName=$indexName", exception)
             eventStatus.copy(
                 deliveryStatus = DeliveryStatus(
                     RestStatus.FAILED_DEPENDENCY.status.toString(),
-                    "Failed to index active response"
+                    "Failed to prepare active response document"
                 )
             )
         }

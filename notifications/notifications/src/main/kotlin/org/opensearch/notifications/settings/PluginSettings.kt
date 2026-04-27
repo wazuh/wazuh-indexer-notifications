@@ -41,6 +41,21 @@ internal object PluginSettings {
     private const val GENERAL_KEY_PREFIX = "$KEY_PREFIX.general"
 
     /**
+     * Active response settings Key prefix.
+     */
+    private const val ACTIVE_RESPONSE_KEY_PREFIX = "$KEY_PREFIX.active_response"
+
+    /**
+     * Bulk flush interval for active response indexing (ms).
+     */
+    private const val ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS_KEY = "$ACTIVE_RESPONSE_KEY_PREFIX.bulk_flush_interval_ms"
+
+    /**
+     * Maximum number of bulk actions before a forced flush.
+     */
+    private const val ACTIVE_RESPONSE_BULK_MAX_ACTIONS_KEY = "$ACTIVE_RESPONSE_KEY_PREFIX.bulk_max_actions"
+
+    /**
      * Operation timeout for network operations.
      */
     private const val OPERATION_TIMEOUT_MS_KEY = "$GENERAL_KEY_PREFIX.operation_timeout_ms"
@@ -86,6 +101,26 @@ internal object PluginSettings {
     private const val MINIMUM_ITEMS_QUERY_COUNT = 10
 
     /**
+     * Default bulk flush interval for active response (ms).
+     */
+    private const val DEFAULT_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS = 500L
+
+    /**
+     * Minimum bulk flush interval for active response (ms).
+     */
+    private const val MINIMUM_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS = 100L
+
+    /**
+     * Default maximum bulk actions before a forced flush.
+     */
+    private const val DEFAULT_ACTIVE_RESPONSE_BULK_MAX_ACTIONS = 1000
+
+    /**
+     * Minimum maximum bulk actions value.
+     */
+    private const val MINIMUM_ACTIVE_RESPONSE_BULK_MAX_ACTIONS = 1
+
+    /**
      * Operation timeout setting in ms for I/O operations
      */
     @Volatile
@@ -96,6 +131,20 @@ internal object PluginSettings {
      */
     @Volatile
     var defaultItemsQueryCount: Int
+
+    /**
+     * Bulk flush interval for active response indexing (ms).
+     * Note: changes take effect only after plugin restart (BulkProcessor does not support live reconfiguration).
+     */
+    @Volatile
+    var activeResponseBulkFlushIntervalMs: Long = DEFAULT_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS
+
+    /**
+     * Maximum number of bulk actions before a forced flush for active response.
+     * Note: changes take effect only after plugin restart.
+     */
+    @Volatile
+    var activeResponseBulkMaxActions: Int = DEFAULT_ACTIVE_RESPONSE_BULK_MAX_ACTIONS
 
     private const val DECIMAL_RADIX: Int = 10
 
@@ -117,6 +166,10 @@ internal object PluginSettings {
         operationTimeoutMs = (settings?.get(OPERATION_TIMEOUT_MS_KEY)?.toLong()) ?: DEFAULT_OPERATION_TIMEOUT_MS
         defaultItemsQueryCount = (settings?.get(DEFAULT_ITEMS_QUERY_COUNT_KEY)?.toInt())
             ?: DEFAULT_ITEMS_QUERY_COUNT_VALUE
+        activeResponseBulkFlushIntervalMs = (settings?.get(ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS_KEY)?.toLong())
+            ?: DEFAULT_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS
+        activeResponseBulkMaxActions = (settings?.get(ACTIVE_RESPONSE_BULK_MAX_ACTIONS_KEY)?.toInt())
+            ?: DEFAULT_ACTIVE_RESPONSE_BULK_MAX_ACTIONS
         defaultSettings = mapOf(
             OPERATION_TIMEOUT_MS_KEY to operationTimeoutMs.toString(DECIMAL_RADIX),
             DEFAULT_ITEMS_QUERY_COUNT_KEY to defaultItemsQueryCount.toString(DECIMAL_RADIX)
@@ -135,6 +188,22 @@ internal object PluginSettings {
         DEFAULT_ITEMS_QUERY_COUNT_KEY,
         defaultSettings[DEFAULT_ITEMS_QUERY_COUNT_KEY]!!.toInt(),
         MINIMUM_ITEMS_QUERY_COUNT,
+        NodeScope,
+        Dynamic
+    )
+
+    val ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS: Setting<Long> = Setting.longSetting(
+        ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS_KEY,
+        DEFAULT_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS,
+        MINIMUM_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS,
+        NodeScope,
+        Dynamic
+    )
+
+    val ACTIVE_RESPONSE_BULK_MAX_ACTIONS: Setting<Int> = Setting.intSetting(
+        ACTIVE_RESPONSE_BULK_MAX_ACTIONS_KEY,
+        DEFAULT_ACTIVE_RESPONSE_BULK_MAX_ACTIONS,
+        MINIMUM_ACTIVE_RESPONSE_BULK_MAX_ACTIONS,
         NodeScope,
         Dynamic
     )
@@ -223,6 +292,8 @@ internal object PluginSettings {
         return listOf(
             OPERATION_TIMEOUT_MS,
             DEFAULT_ITEMS_QUERY_COUNT,
+            ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS,
+            ACTIVE_RESPONSE_BULK_MAX_ACTIONS,
             FILTER_BY_BACKEND_ROLES,
             MULTI_TENANCY_ENABLED,
             REMOTE_METADATA_REGION,
@@ -239,6 +310,8 @@ internal object PluginSettings {
     private fun updateSettingValuesFromLocal(clusterService: ClusterService) {
         operationTimeoutMs = OPERATION_TIMEOUT_MS.get(clusterService.settings)
         defaultItemsQueryCount = DEFAULT_ITEMS_QUERY_COUNT.get(clusterService.settings)
+        activeResponseBulkFlushIntervalMs = ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS.get(clusterService.settings)
+        activeResponseBulkMaxActions = ACTIVE_RESPONSE_BULK_MAX_ACTIONS.get(clusterService.settings)
     }
 
     /**
@@ -256,6 +329,16 @@ internal object PluginSettings {
         if (clusterDefaultItemsQueryCount != null) {
             log.debug("$LOG_PREFIX:$DEFAULT_ITEMS_QUERY_COUNT_KEY -autoUpdatedTo-> $clusterDefaultItemsQueryCount")
             defaultItemsQueryCount = clusterDefaultItemsQueryCount
+        }
+        val clusterActiveResponseBulkFlushIntervalMs = clusterService.clusterSettings.get(ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS)
+        if (clusterActiveResponseBulkFlushIntervalMs != null) {
+            log.debug("$LOG_PREFIX:$ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS_KEY -autoUpdatedTo-> $clusterActiveResponseBulkFlushIntervalMs")
+            activeResponseBulkFlushIntervalMs = clusterActiveResponseBulkFlushIntervalMs
+        }
+        val clusterActiveResponseBulkMaxActions = clusterService.clusterSettings.get(ACTIVE_RESPONSE_BULK_MAX_ACTIONS)
+        if (clusterActiveResponseBulkMaxActions != null) {
+            log.debug("$LOG_PREFIX:$ACTIVE_RESPONSE_BULK_MAX_ACTIONS_KEY -autoUpdatedTo-> $clusterActiveResponseBulkMaxActions")
+            activeResponseBulkMaxActions = clusterActiveResponseBulkMaxActions
         }
     }
 
@@ -278,6 +361,14 @@ internal object PluginSettings {
             defaultItemsQueryCount = it
             log.info("$LOG_PREFIX:$DEFAULT_ITEMS_QUERY_COUNT_KEY -updatedTo-> $it")
         }
+        clusterService.clusterSettings.addSettingsUpdateConsumer(ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS) {
+            activeResponseBulkFlushIntervalMs = it
+            log.info("$LOG_PREFIX:$ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS_KEY -updatedTo-> $it (restart required)")
+        }
+        clusterService.clusterSettings.addSettingsUpdateConsumer(ACTIVE_RESPONSE_BULK_MAX_ACTIONS) {
+            activeResponseBulkMaxActions = it
+            log.info("$LOG_PREFIX:$ACTIVE_RESPONSE_BULK_MAX_ACTIONS_KEY -updatedTo-> $it (restart required)")
+        }
     }
 
     // reset the settings values to default values for testing purpose
@@ -285,5 +376,7 @@ internal object PluginSettings {
     fun reset() {
         operationTimeoutMs = DEFAULT_OPERATION_TIMEOUT_MS
         defaultItemsQueryCount = DEFAULT_ITEMS_QUERY_COUNT_VALUE
+        activeResponseBulkFlushIntervalMs = DEFAULT_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS
+        activeResponseBulkMaxActions = DEFAULT_ACTIVE_RESPONSE_BULK_MAX_ACTIONS
     }
 }
