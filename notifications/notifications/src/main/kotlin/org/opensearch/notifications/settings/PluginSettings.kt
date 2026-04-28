@@ -134,17 +134,18 @@ internal object PluginSettings {
 
     /**
      * Bulk flush interval for active response indexing (ms).
-     * Note: changes take effect only after plugin restart (BulkProcessor does not support live reconfiguration).
+     * Read once at plugin startup. The value is fixed for the lifetime of the node —
+     * BulkProcessor does not support live reconfiguration, so this setting is NodeScope-only.
      */
-    @Volatile
     var activeResponseBulkFlushIntervalMs: Long = DEFAULT_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS
+        private set
 
     /**
      * Maximum number of bulk actions before a forced flush for active response.
-     * Note: changes take effect only after plugin restart.
+     * Read once at plugin startup; see [activeResponseBulkFlushIntervalMs] for rationale.
      */
-    @Volatile
     var activeResponseBulkMaxActions: Int = DEFAULT_ACTIVE_RESPONSE_BULK_MAX_ACTIONS
+        private set
 
     private const val DECIMAL_RADIX: Int = 10
 
@@ -192,20 +193,20 @@ internal object PluginSettings {
         Dynamic
     )
 
+    // BulkProcessor does not support live reconfiguration of flushInterval / bulkActions,
+    // so these settings are NodeScope-only — they take effect on plugin/node startup only.
     val ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS: Setting<Long> = Setting.longSetting(
         ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS_KEY,
         DEFAULT_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS,
         MINIMUM_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS,
-        NodeScope,
-        Dynamic
+        NodeScope
     )
 
     val ACTIVE_RESPONSE_BULK_MAX_ACTIONS: Setting<Int> = Setting.intSetting(
         ACTIVE_RESPONSE_BULK_MAX_ACTIONS_KEY,
         DEFAULT_ACTIVE_RESPONSE_BULK_MAX_ACTIONS,
         MINIMUM_ACTIVE_RESPONSE_BULK_MAX_ACTIONS,
-        NodeScope,
-        Dynamic
+        NodeScope
     )
 
     val LEGACY_ALERTING_FILTER_BY_BACKEND_ROLES: Setting<Boolean> = Setting.boolSetting(
@@ -330,16 +331,9 @@ internal object PluginSettings {
             log.debug("$LOG_PREFIX:$DEFAULT_ITEMS_QUERY_COUNT_KEY -autoUpdatedTo-> $clusterDefaultItemsQueryCount")
             defaultItemsQueryCount = clusterDefaultItemsQueryCount
         }
-        val clusterActiveResponseBulkFlushIntervalMs = clusterService.clusterSettings.get(ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS)
-        if (clusterActiveResponseBulkFlushIntervalMs != null) {
-            log.debug("$LOG_PREFIX:$ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS_KEY -autoUpdatedTo-> $clusterActiveResponseBulkFlushIntervalMs")
-            activeResponseBulkFlushIntervalMs = clusterActiveResponseBulkFlushIntervalMs
-        }
-        val clusterActiveResponseBulkMaxActions = clusterService.clusterSettings.get(ACTIVE_RESPONSE_BULK_MAX_ACTIONS)
-        if (clusterActiveResponseBulkMaxActions != null) {
-            log.debug("$LOG_PREFIX:$ACTIVE_RESPONSE_BULK_MAX_ACTIONS_KEY -autoUpdatedTo-> $clusterActiveResponseBulkMaxActions")
-            activeResponseBulkMaxActions = clusterActiveResponseBulkMaxActions
-        }
+        // ACTIVE_RESPONSE_BULK_* settings are NodeScope-only; they are read once in
+        // updateSettingValuesFromLocal at startup and cannot change at runtime, so
+        // there is no cluster-state listener to register here.
     }
 
     /**
@@ -361,14 +355,8 @@ internal object PluginSettings {
             defaultItemsQueryCount = it
             log.info("$LOG_PREFIX:$DEFAULT_ITEMS_QUERY_COUNT_KEY -updatedTo-> $it")
         }
-        clusterService.clusterSettings.addSettingsUpdateConsumer(ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS) {
-            activeResponseBulkFlushIntervalMs = it
-            log.info("$LOG_PREFIX:$ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS_KEY -updatedTo-> $it (restart required)")
-        }
-        clusterService.clusterSettings.addSettingsUpdateConsumer(ACTIVE_RESPONSE_BULK_MAX_ACTIONS) {
-            activeResponseBulkMaxActions = it
-            log.info("$LOG_PREFIX:$ACTIVE_RESPONSE_BULK_MAX_ACTIONS_KEY -updatedTo-> $it (restart required)")
-        }
+        // No update consumers for ACTIVE_RESPONSE_BULK_* — those settings are NodeScope-only
+        // and cannot change at runtime (BulkProcessor has no live-reconfig API).
     }
 
     // reset the settings values to default values for testing purpose
