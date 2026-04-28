@@ -7,6 +7,7 @@ package org.opensearch.notifications
 
 import org.opensearch.action.ActionRequest
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver
+import org.opensearch.cluster.node.DiscoveryNode
 import org.opensearch.cluster.node.DiscoveryNodes
 import org.opensearch.cluster.service.ClusterService
 import org.opensearch.common.settings.ClusterSettings
@@ -32,6 +33,7 @@ import org.opensearch.notifications.action.SendNotificationAction
 import org.opensearch.notifications.action.SendTestNotificationAction
 import org.opensearch.notifications.action.UpdateNotificationConfigAction
 import org.opensearch.notifications.index.ConfigIndexingActions
+import org.opensearch.notifications.index.DefaultChannelInitializer
 import org.opensearch.notifications.index.NotificationConfigIndex
 import org.opensearch.notifications.resthandler.NotificationChannelListRestHandler
 import org.opensearch.notifications.resthandler.NotificationConfigRestHandler
@@ -49,6 +51,7 @@ import org.opensearch.notifications.spi.NotificationCore
 import org.opensearch.notifications.spi.NotificationCoreExtension
 import org.opensearch.notifications.util.SecureIndexClient
 import org.opensearch.plugins.ActionPlugin
+import org.opensearch.plugins.ClusterPlugin
 import org.opensearch.plugins.Plugin
 import org.opensearch.plugins.SystemIndexPlugin
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory
@@ -70,7 +73,7 @@ import java.util.function.Supplier
  * Entry point of the OpenSearch Notifications plugin
  * This class initializes the rest handlers.
  */
-class NotificationPlugin : ActionPlugin, Plugin(), NotificationCoreExtension, SystemIndexPlugin {
+class NotificationPlugin : ActionPlugin, ClusterPlugin, Plugin(), NotificationCoreExtension, SystemIndexPlugin {
 
     lateinit var clusterService: ClusterService // initialized in createComponents()
 
@@ -208,5 +211,15 @@ class NotificationPlugin : ActionPlugin, Plugin(), NotificationCoreExtension, Sy
     override fun setNotificationCore(core: NotificationCore) {
         log.debug("$LOG_PREFIX:setNotificationCore")
         CoreProvider.initialize(core)
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    override fun onNodeStarted(localNode: DiscoveryNode) {
+        if (localNode.isClusterManagerNode) {
+            log.info("$LOG_PREFIX:Initializing default notification channels on cluster manager node")
+            DefaultChannelInitializer.initialize()
+        }
     }
 }
