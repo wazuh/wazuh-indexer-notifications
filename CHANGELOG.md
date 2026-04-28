@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased 5.0.x]
 ### Added
+- Test entry for automated merge test [5538]
 - Initialize repository. [(#2)](https://github.com/wazuh/wazuh-indexer-notifications/issues/2)
 - Implement wazuh-indexer-common-utils usage [(#17)](https://github.com/wazuh/wazuh-indexer-notifications/pull/17)
 - Add active response channel [(#7)](https://github.com/wazuh/wazuh-indexer-notifications/pull/7)
