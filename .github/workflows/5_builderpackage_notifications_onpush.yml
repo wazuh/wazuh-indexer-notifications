@@ -5,8 +5,6 @@ name: (5.x) Build packages (on push)
 
 on:
   push:
-    paths-ignore:
-      - "**/*.md"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
