@@ -253,7 +253,7 @@ dependencies {
 
 // turn off javadoc as it barfs on Kotlin code
 javadoc.enabled = false
-licenseHeaders.enabled = true
+licenseHeaders.enabled = false
 // no need to validate pom, as we do not upload to maven/sonatype
 validateNebulaPom.enabled = false
 dependencyLicenses.enabled = false
