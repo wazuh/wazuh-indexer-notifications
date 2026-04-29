@@ -223,6 +223,9 @@ class NotificationPlugin : ActionPlugin, ClusterPlugin, Plugin(), NotificationCo
     override fun close() {
         if (::activeResponseBulkIndexer.isInitialized) {
             activeResponseBulkIndexer.close()
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
