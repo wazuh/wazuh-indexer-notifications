@@ -4,7 +4,8 @@ name: (5.x) Build packages (on push)
 # - On push
 
 on:
-  push:
+  pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
     paths-ignore:
       - "**/*.md"
 
