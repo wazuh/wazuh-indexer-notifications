@@ -40,6 +40,7 @@ import org.opensearch.notifications.resthandler.NotificationConfigRestHandler
 import org.opensearch.notifications.resthandler.NotificationFeaturesRestHandler
 import org.opensearch.notifications.resthandler.SendTestMessageRestHandler
 import org.opensearch.notifications.security.UserAccessManager
+import org.opensearch.notifications.send.ActiveResponseBulkIndexer
 import org.opensearch.notifications.send.SendMessageActionHelper
 import org.opensearch.notifications.settings.PluginSettings
 import org.opensearch.notifications.settings.PluginSettings.MULTI_TENANCY_ENABLED
@@ -76,6 +77,7 @@ import java.util.function.Supplier
 class NotificationPlugin : ActionPlugin, ClusterPlugin, Plugin(), NotificationCoreExtension, SystemIndexPlugin {
 
     lateinit var clusterService: ClusterService // initialized in createComponents()
+    private lateinit var activeResponseBulkIndexer: ActiveResponseBulkIndexer
 
     internal companion object {
         private val log by logger(NotificationPlugin::class.java)
@@ -140,7 +142,12 @@ class NotificationPlugin : ActionPlugin, ClusterPlugin, Plugin(), NotificationCo
         PluginSettings.addSettingsUpdateConsumer(clusterService)
         NotificationConfigIndex.initialize(sdkClient, client, clusterService)
         ConfigIndexingActions.initialize(NotificationConfigIndex, UserAccessManager)
-        SendMessageActionHelper.initialize(NotificationConfigIndex, UserAccessManager, client)
+        activeResponseBulkIndexer = ActiveResponseBulkIndexer(
+            client,
+            PluginSettings.activeResponseBulkFlushIntervalMs,
+            PluginSettings.activeResponseBulkMaxActions
+        )
+        SendMessageActionHelper.initialize(NotificationConfigIndex, UserAccessManager, client, activeResponseBulkIndexer)
         return listOf(sdkClient)
     }
 
@@ -211,6 +218,12 @@ class NotificationPlugin : ActionPlugin, ClusterPlugin, Plugin(), NotificationCo
     override fun setNotificationCore(core: NotificationCore) {
         log.debug("$LOG_PREFIX:setNotificationCore")
         CoreProvider.initialize(core)
+    }
+
+    override fun close() {
+        if (::activeResponseBulkIndexer.isInitialized) {
+            activeResponseBulkIndexer.close()
+        }
     }
 
     /**
