@@ -28,7 +28,7 @@ on:
 
 jobs:
   branches:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       common_utils_ref: ${{ steps.resolve.outputs.wazuh_indexer_common_utils_branch }}
     steps:
@@ -45,7 +45,7 @@ jobs:
           echo "Common Utils branch: ${{ steps.resolve.outputs.wazuh_indexer_common_utils_branch }}"
 
   get-version:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -59,7 +59,7 @@ jobs:
         run: echo "version=$(jq -r .version<VERSION.json)" >> "$GITHUB_OUTPUT"
 
   publish-common-utils:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: [branches, get-version]
     steps:
       - name: Restore Maven Local Cache
@@ -91,8 +91,8 @@ jobs:
       matrix:
         java: [21, 25]
         os:
-          - ubuntu-24.04-arm  # arm64-preview
-          - ubuntu-24.04  # x64
+          - ubuntu-26.04-arm  # arm64-preview
+          - ubuntu-26.04  # x64
 
     # Job name
     name: Build Notifications with JDK ${{ matrix.java }} on ${{ matrix.os }}
