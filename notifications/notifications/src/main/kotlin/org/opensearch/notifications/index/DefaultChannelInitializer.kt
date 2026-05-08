@@ -19,6 +19,7 @@ package org.opensearch.notifications.index
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.opensearch.OpenSearchStatusException
 import org.opensearch.commons.notifications.model.ConfigType
 import org.opensearch.commons.notifications.model.HttpMethodType
 import org.opensearch.commons.notifications.model.NotificationConfig
@@ -157,10 +158,17 @@ object DefaultChannelInitializer {
                 created++
                 log.info("$LOG_PREFIX:Created default notification channel: ${channel.config.name} (${channel.id})")
             } catch (e: Exception) {
-                log.error(
-                    "$LOG_PREFIX:Failed to create default notification channel: ${channel.config.name} (${channel.id})",
-                    e
-                )
+                if (isVersionConflict(e)) {
+                    log.debug(
+                        "$LOG_PREFIX:Default notification channel already exists (concurrent creation): " +
+                            "${channel.config.name} (${channel.id})"
+                    )
+                } else {
+                    log.error(
+                        "$LOG_PREFIX:Failed to create default notification channel: ${channel.config.name} (${channel.id})",
+                        e
+                    )
+                }
             }
         }
 
@@ -180,6 +188,18 @@ object DefaultChannelInitializer {
             log.debug("$LOG_PREFIX:Could not check existing default channels: ${e.message}")
             emptySet()
         }
+    }
+
+    /**
+     * Checks whether the exception is caused by a version conflict (document already exists).
+     * This can happen in multi-node clusters where two nodes race to create the same channel.
+     */
+    private fun isVersionConflict(e: Exception): Boolean {
+        val message = e.message ?: ""
+        if (message.contains("version conflict", ignoreCase = true)) return true
+        val cause = e.cause
+        if (cause is OpenSearchStatusException && cause.message?.contains("version conflict", ignoreCase = true) == true) return true
+        return false
     }
 
     /**
