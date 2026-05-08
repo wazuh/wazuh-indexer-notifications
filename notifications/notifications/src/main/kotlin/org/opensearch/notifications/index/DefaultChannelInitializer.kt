@@ -19,8 +19,6 @@ package org.opensearch.notifications.index
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.opensearch.action.get.GetRequest
-import org.opensearch.action.get.GetResponse
 import org.opensearch.action.index.IndexRequest
 import org.opensearch.common.xcontent.XContentFactory
 import org.opensearch.commons.notifications.model.ConfigType
@@ -157,30 +155,13 @@ object DefaultChannelInitializer {
     internal fun initializeDefaultChannels() {
         log.info("$LOG_PREFIX:Starting initialization of default notification channels")
 
-        val existingIds = getExistingDefaultChannelIds()
-        val missingChannels = DEFAULT_CHANNELS.filter { it.id !in existingIds }
-
-        if (missingChannels.isEmpty()) {
-            log.info("$LOG_PREFIX:All default notification channels already exist")
-            return
-        }
-
-        log.info("$LOG_PREFIX:Creating ${missingChannels.size} missing default notification channels")
-
-        var created = 0
-        var alreadyExisted = 0
-        for (channel in missingChannels) {
+        for (channel in DEFAULT_CHANNELS) {
             try {
                 createChannel(channel)
-                created++
-                log.info("$LOG_PREFIX:Created default notification channel: ${channel.config.name} (${channel.id})")
+                log.info("$LOG_PREFIX:Default notification channel [${channel.id}]: created")
             } catch (e: Exception) {
                 if (isVersionConflict(e)) {
-                    alreadyExisted++
-                    log.debug(
-                        "$LOG_PREFIX:Default notification channel already exists: " +
-                            "${channel.config.name} (${channel.id})"
-                    )
+                    log.info("$LOG_PREFIX:Default notification channel [${channel.id}]: already exists, ignored")
                 } else {
                     log.error(
                         "$LOG_PREFIX:Failed to create default notification channel: ${channel.config.name} (${channel.id})",
@@ -190,30 +171,7 @@ object DefaultChannelInitializer {
             }
         }
 
-        log.info(
-            "$LOG_PREFIX:Default notification channels initialization complete. " +
-                "Created: $created, already existed: $alreadyExisted, failed: ${missingChannels.size - created - alreadyExisted}"
-        )
-    }
-
-    /**
-     * Returns the set of default channel IDs that already exist in the index.
-     */
-    private fun getExistingDefaultChannelIds(): Set<String> {
-        val existingIds = mutableSetOf<String>()
-        for (channel in DEFAULT_CHANNELS) {
-            try {
-                val response: GetResponse = client.get(
-                    GetRequest(NotificationConfigIndex.INDEX_NAME, channel.id)
-                ).get(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                if (response.isExists) {
-                    existingIds.add(channel.id)
-                }
-            } catch (e: Exception) {
-                log.debug("$LOG_PREFIX:Could not check if channel [${channel.id}] exists: ${e.message}")
-            }
-        }
-        return existingIds
+        log.info("$LOG_PREFIX:Default notification channels initialization complete")
     }
 
     /**
