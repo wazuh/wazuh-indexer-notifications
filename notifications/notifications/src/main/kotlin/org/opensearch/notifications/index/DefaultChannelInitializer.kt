@@ -19,16 +19,24 @@ package org.opensearch.notifications.index
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.opensearch.action.admin.indices.exists.indices.IndicesExistsRequest
+import org.opensearch.action.get.GetRequest
+import org.opensearch.action.index.IndexRequest
+import org.opensearch.common.xcontent.XContentFactory
 import org.opensearch.commons.notifications.model.ConfigType
 import org.opensearch.commons.notifications.model.HttpMethodType
 import org.opensearch.commons.notifications.model.NotificationConfig
 import org.opensearch.commons.notifications.model.Slack
 import org.opensearch.commons.notifications.model.Webhook
 import org.opensearch.commons.utils.logger
+import org.opensearch.core.xcontent.ToXContent
+import org.opensearch.index.engine.VersionConflictEngineException
 import org.opensearch.notifications.NotificationPlugin.Companion.LOG_PREFIX
 import org.opensearch.notifications.model.DocMetadata
 import org.opensearch.notifications.model.NotificationConfigDoc
+import org.opensearch.transport.client.Client
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 
 /**
  * Creates default notification channels on startup if they don't already exist.
@@ -39,6 +47,15 @@ import java.time.Instant
 object DefaultChannelInitializer {
     private val log by logger(DefaultChannelInitializer::class.java)
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    private const val TIMEOUT_SECONDS = 30L
+    private lateinit var client: Client
+
+    /**
+     * Sets the OpenSearch client used for existence checks.
+     */
+    fun setClient(client: Client) {
+        this.client = client
+    }
 
     /** Default channel definitions matching the ones previously created by the Wazuh Dashboard. */
     internal data class ChannelDefinition(
@@ -135,64 +152,124 @@ object DefaultChannelInitializer {
     }
 
     /**
-     * Core initialization logic. Checks for existing channels and creates missing ones.
+     * Core initialization logic.
+     *
+     * If the index does not exist yet (first startup), channels are created through
+     * [NotificationConfigIndex] which handles index creation with proper mappings.
+     * If the index already exists (subsequent restarts), channels are managed directly
+     * through the OpenSearch client for a lightweight, silent operation.
      */
     internal suspend fun initializeDefaultChannels() {
         log.info("$LOG_PREFIX:Starting initialization of default notification channels")
 
-        val existingIds = getExistingDefaultChannelIds()
-        val missingChannels = DEFAULT_CHANNELS.filter { it.id !in existingIds }
+        val indexExists = indexExists()
 
-        if (missingChannels.isEmpty()) {
-            log.info("$LOG_PREFIX:All default notification channels already exist")
-            return
-        }
-
-        log.info("$LOG_PREFIX:Creating ${missingChannels.size} missing default notification channels")
-
-        var created = 0
-        for (channel in missingChannels) {
+        for (channel in DEFAULT_CHANNELS) {
+            if (indexExists && channelExists(channel.id)) {
+                log.info("$LOG_PREFIX:Default notification channel [${channel.id}]: already exists, ignored")
+                continue
+            }
             try {
-                createChannel(channel)
-                created++
-                log.info("$LOG_PREFIX:Created default notification channel: ${channel.config.name} (${channel.id})")
+                if (indexExists) {
+                    insertChannel(channel)
+                } else {
+                    createChannelWithIndex(channel)
+                }
+                log.info("$LOG_PREFIX:Default notification channel [${channel.id}]: created")
             } catch (e: Exception) {
-                log.error(
-                    "$LOG_PREFIX:Failed to create default notification channel: ${channel.config.name} (${channel.id})",
-                    e
-                )
+                if (isDocumentAlreadyExists(e)) {
+                    log.info("$LOG_PREFIX:Default notification channel [${channel.id}]: already exists, ignored")
+                } else {
+                    log.error(
+                        "$LOG_PREFIX:Failed to create default notification channel: ${channel.config.name} (${channel.id})",
+                        e
+                    )
+                }
             }
         }
 
-        log.info("$LOG_PREFIX:Default notification channels initialization complete. Created $created/${missingChannels.size}")
+        log.info("$LOG_PREFIX:Default notification channels initialization complete")
     }
 
     /**
-     * Returns the set of default channel IDs that already exist in the index.
+     * Checks whether the exception indicates the document already exists.
+     * This can happen when the index is still recovering and the existence check
+     * returns a false negative, but the subsequent insert finds the document.
      */
-    private suspend fun getExistingDefaultChannelIds(): Set<String> {
+    private fun isDocumentAlreadyExists(e: Exception): Boolean {
+        var current: Throwable? = e
+        while (current != null) {
+            if (current is VersionConflictEngineException) return true
+            current = current.cause
+        }
+        return false
+    }
+
+    /**
+     * Checks whether the notifications config index exists.
+     */
+    private fun indexExists(): Boolean {
         return try {
-            val defaultIds = DEFAULT_CHANNELS.map { it.id }.toSet()
-            val existing = NotificationConfigIndex.getNotificationConfigs(defaultIds)
-            existing.map { it.docInfo.id!! }.toSet()
+            client.admin().indices()
+                .exists(IndicesExistsRequest(NotificationConfigIndex.INDEX_NAME))
+                .get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isExists
         } catch (e: Exception) {
-            // Index may not exist yet, or documents not found — treat as none existing
-            log.debug("$LOG_PREFIX:Could not check existing default channels: ${e.message}")
-            emptySet()
+            log.debug("$LOG_PREFIX:Could not check if index exists: ${e.message}")
+            false
         }
     }
 
     /**
-     * Creates a single default notification channel.
+     * Checks whether a channel document already exists in the index.
      */
-    private suspend fun createChannel(channel: ChannelDefinition) {
+    private fun channelExists(id: String): Boolean {
+        return try {
+            client.get(
+                GetRequest(NotificationConfigIndex.INDEX_NAME, id)
+            ).get(TIMEOUT_SECONDS, TimeUnit.SECONDS).isExists
+        } catch (e: Exception) {
+            log.debug("$LOG_PREFIX:Could not check if channel [$id] exists: ${e.message}")
+            false
+        }
+    }
+
+    /**
+     * Creates a channel through [NotificationConfigIndex], which ensures the index
+     * is created with the correct mappings. Used on first startup when the index
+     * does not exist yet.
+     */
+    private suspend fun createChannelWithIndex(channel: ChannelDefinition) {
+        val configDoc = buildConfigDoc(channel)
+        NotificationConfigIndex.createNotificationConfig(configDoc, channel.id)
+    }
+
+    /**
+     * Inserts a channel document directly into the existing index.
+     * Uses OpType.CREATE to fail gracefully if the document already exists.
+     */
+    private fun insertChannel(channel: ChannelDefinition) {
+        val configDoc = buildConfigDoc(channel)
+        val builder = XContentFactory.jsonBuilder()
+        configDoc.toXContent(builder, ToXContent.EMPTY_PARAMS)
+
+        val indexRequest = IndexRequest(NotificationConfigIndex.INDEX_NAME)
+            .id(channel.id)
+            .source(builder)
+            .create(true)
+
+        client.index(indexRequest).get(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+    }
+
+    /**
+     * Builds a NotificationConfigDoc for the given channel definition.
+     */
+    private fun buildConfigDoc(channel: ChannelDefinition): NotificationConfigDoc {
         val now = Instant.now()
         val metadata = DocMetadata(
             lastUpdateTime = now,
             createdTime = now,
-            access = listOf() // Empty access list makes the channel public (visible to all users)
+            access = listOf()
         )
-        val configDoc = NotificationConfigDoc(metadata, channel.config)
-        NotificationConfigIndex.createNotificationConfig(configDoc, channel.id)
+        return NotificationConfigDoc(metadata, channel.config)
     }
 }

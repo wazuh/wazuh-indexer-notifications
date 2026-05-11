@@ -148,6 +148,7 @@ class NotificationPlugin : ActionPlugin, ClusterPlugin, Plugin(), NotificationCo
             PluginSettings.activeResponseBulkMaxActions
         )
         SendMessageActionHelper.initialize(NotificationConfigIndex, UserAccessManager, client, activeResponseBulkIndexer)
+        DefaultChannelInitializer.setClient(client)
         return listOf(sdkClient)
     }
 
