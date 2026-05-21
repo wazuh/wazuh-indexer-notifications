@@ -17,7 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 -
 
 ### Changed
--
+- Bump actions to NodeJS 24 [(#14)](https://github.com/wazuh/wazuh-indexer-notifications/pull/14)
 
 ### Deprecated
 -
@@ -32,4 +32,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Security
 -
 
-[Unreleased 5.0.x]: https://github.com/wazuh/wazuh-indexer-notifications/compare/0ea5fdda7f430a0efe11b9465ad4c3d4f2a3776e...main
+[Unreleased 5.0.x]: https://github.com/wazuh/wazuh-indexer-notifications/compare/1929b1cf1d6b05d830b58916a8d1d6182f2f5ad8...main
