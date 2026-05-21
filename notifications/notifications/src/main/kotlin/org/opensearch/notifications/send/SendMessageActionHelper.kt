@@ -299,14 +299,11 @@ object SendMessageActionHelper {
         val indexName = parts[1]
 
         return try {
-            // Retrieve only the wazuh sub-fields allowed by the strict mapping of wazuh-active-responses.
-            // Do NOT copy the entire source document — index-specific fields (e.g. 'file' in wazuh-states-fim-files)
-            // are not mapped here and would cause a StrictDynamicMappingException.
+            // Preserve the full wazuh object from the source document so the active response event
+            // contains the same wazuh payload as the original event.
             val sourceDocument = getSourceDocument(docId, indexName)
-            val allowedWazuhKeys = setOf("agent", "cluster", "integration", "protocol", "schema", "space")
             val wazuhMap = (sourceDocument["wazuh"] as? Map<*, *>)
                 ?.entries
-                ?.filter { it.key.toString() in allowedWazuhKeys }
                 ?.associate { it.key.toString() to it.value }
                 ?.toMutableMap()
                 ?: mutableMapOf()
