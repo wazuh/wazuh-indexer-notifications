@@ -253,104 +253,135 @@ internal class PluginActionTests {
     @Test
     fun `Send active response message should preserve full wazuh object`() {
         val wazuhObject = mapOf<String, Any?>(
+            "cluster" to mapOf<String, Any?>(
+                "node" to "node01",
+                "name" to "wazuh"
+            ),
+            "protocol" to mapOf<String, Any?>(
+                "location" to "syscheck",
+                "queue" to 56
+            ),
             "agent" to mapOf<String, Any?>(
-                "build" to emptyMap<String, Any?>(),
                 "host" to mapOf<String, Any?>(
-                    "boot" to emptyMap<String, Any?>(),
-                    "cpu" to emptyMap<String, Any?>(),
-                    "disk" to mapOf<String, Any?>(
-                        "read" to emptyMap<String, Any?>(),
-                        "write" to emptyMap<String, Any?>()
+                    "hostname" to "primary",
+                    "os" to mapOf<String, Any?>(
+                        "name" to "Ubuntu",
+                        "type" to "linux",
+                        "version" to "22.04.3 LTS (Jammy Jellyfish)",
+                        "platform" to "ubuntu"
                     ),
-                    "geo" to emptyMap<String, Any?>(),
-                    "memory" to mapOf<String, Any?>("used" to emptyMap<String, Any?>()),
-                    "network" to mapOf<String, Any?>(
-                        "egress" to emptyMap<String, Any?>(),
-                        "ingress" to emptyMap<String, Any?>()
+                    "architecture" to "x86_64"
+                ),
+                "name" to "primary",
+                "groups" to listOf("default"),
+                "id" to "001",
+                "version" to "v5.0.0"
+            ),
+            "integration" to mapOf<String, Any?>(
+                "name" to "wazuh-fim",
+                "decoders" to listOf(
+                    "decoder/core-wazuh-message/0",
+                    "decoder/wazuh-fim/0"
+                ),
+                "category" to "system-activity"
+            ),
+            "rule" to mapOf<String, Any?>(
+                "sigma_id" to "95cbac32-7a12-4b63-b85d-0a4d598b74e9",
+                "level" to "low",
+                "compliance" to mapOf<String, Any?>(
+                    "iso_27001" to listOf("A.12.4.1", "A.12.6.1", "A.16.1.2"),
+                    "hipaa" to listOf("164.308.a.1.ii.D", "164.308.a.6", "164.312.b"),
+                    "pci_dss" to listOf("6.2", "10.5", "11.4"),
+                    "tsc" to listOf("A1.2", "CC7.2", "CC7.3"),
+                    "nis2" to listOf("21.2.a", "21.2.e", "23"),
+                    "nist_800_171" to listOf("3.3.1", "3.3.2", "3.4.1", "3.14.6", "3.14.7"),
+                    "fedramp" to listOf("AU-6", "CM-6", "SI-4"),
+                    "nist_800_53" to listOf("AU-6", "CM-6", "SI-4"),
+                    "cmmc" to listOf("AU.L2-3.3.1", "CM.L2-3.4.1", "SI.L2-3.14.1"),
+                    "gdpr" to listOf("IV_32.1.a", "IV_33.1")
+                ),
+                "mitre" to mapOf<String, Any?>(
+                    "technique" to listOf("T1105", "T1036"),
+                    "tactic" to listOf("TA0003", "TA0005")
+                ),
+                "id" to "95cbac32-7a12-4b63-b85d-0a4d598b74e9",
+                "title" to "Wazuh FIM - File created",
+                "tags" to listOf(
+                    "low",
+                    "wazuh-fim",
+                    "attack.persistence",
+                    "attack.defense-evasion",
+                    "attack.t1105",
+                    "attack.t1036"
+                ),
+                "status" to "stable"
+            ),
+            "threat" to mapOf<String, Any?>(
+                "enrichments" to listOf(
+                    mapOf<String, Any?>(
+                        "indicator" to mapOf<String, Any?>(
+                            "feed" to mapOf<String, Any?>("name" to "wazuh-custom"),
+                            "first_seen" to "2026-03-31T00:00:00.000Z",
+                            "last_seen" to "2026-03-31T00:00:00.000Z",
+                            "software" to mapOf<String, Any?>(
+                                "name" to "eicar_test_file",
+                                "alias" to listOf("EICAR Test File", "AntiVirus Test File"),
+                                "type" to "test"
+                            ),
+                            "provider" to "wazuh",
+                            "confidence" to 100,
+                            "name" to "44d88612fea8a8f36de82e1278abb02f",
+                            "id" to "9999991",
+                            "type" to "hash_md5",
+                            "tags" to listOf("eicar", "test", "antivirus", "safe-test")
+                        ),
+                        "matched" to mapOf<String, Any?>("field" to "file.hash.md5")
                     ),
-                    "os" to emptyMap<String, Any?>(),
-                    "risk" to emptyMap<String, Any?>()
+                    mapOf<String, Any?>(
+                        "indicator" to mapOf<String, Any?>(
+                            "feed" to mapOf<String, Any?>("name" to "wazuh-custom"),
+                            "first_seen" to "2026-03-31T00:00:00.000Z",
+                            "last_seen" to "2026-03-31T00:00:00.000Z",
+                            "software" to mapOf<String, Any?>(
+                                "name" to "eicar_test_file",
+                                "alias" to listOf("EICAR Test File", "AntiVirus Test File"),
+                                "type" to "test"
+                            ),
+                            "provider" to "wazuh",
+                            "confidence" to 100,
+                            "name" to "3395856ce81f2b7382dee72602f798b642f14140",
+                            "id" to "9999992",
+                            "type" to "hash_sha1",
+                            "tags" to listOf("eicar", "test", "antivirus", "safe-test")
+                        ),
+                        "matched" to mapOf<String, Any?>("field" to "file.hash.sha1")
+                    ),
+                    mapOf<String, Any?>(
+                        "indicator" to mapOf<String, Any?>(
+                            "feed" to mapOf<String, Any?>("name" to "wazuh-custom"),
+                            "first_seen" to "2026-03-31T00:00:00.000Z",
+                            "last_seen" to "2026-03-31T00:00:00.000Z",
+                            "software" to mapOf<String, Any?>(
+                                "name" to "eicar_test_file",
+                                "alias" to listOf("EICAR Test File", "AntiVirus Test File"),
+                                "type" to "test"
+                            ),
+                            "provider" to "wazuh",
+                            "confidence" to 100,
+                            "name" to "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+                            "id" to "9999990",
+                            "type" to "hash_sha256",
+                            "tags" to listOf("eicar", "test", "antivirus", "safe-test")
+                        ),
+                        "matched" to mapOf<String, Any?>("field" to "file.hash.sha256")
+                    )
                 )
             ),
-            "cluster" to emptyMap<String, Any?>(),
-            "event" to emptyMap<String, Any?>(),
-            "integration" to emptyMap<String, Any?>(),
-            "protocol" to emptyMap<String, Any?>(),
-            "schema" to emptyMap<String, Any?>(),
-            "space" to emptyMap<String, Any?>(),
-            "threat" to mapOf<String, Any?>(
-                "enrichments" to mapOf<String, Any?>(
-                    "indicator" to mapOf<String, Any?>(
-                        "as" to mapOf<String, Any?>(
-                            "organization" to emptyMap<String, Any?>()
-                        ),
-                        "email" to emptyMap<String, Any?>(),
-                        "feed" to emptyMap<String, Any?>(),
-                        "file" to mapOf<String, Any?>(
-                            "code_signature" to emptyMap<String, Any?>(),
-                            "elf" to mapOf<String, Any?>(
-                                "header" to emptyMap<String, Any?>(),
-                                "sections" to emptyMap<String, Any?>(),
-                                "segments" to emptyMap<String, Any?>()
-                            ),
-                            "hash" to emptyMap<String, Any?>(),
-                            "pe" to mapOf<String, Any?>(
-                                "sections" to emptyMap<String, Any?>()
-                            ),
-                            "x509" to mapOf<String, Any?>(
-                                "issuer" to emptyMap<String, Any?>(),
-                                "subject" to emptyMap<String, Any?>()
-                            )
-                        ),
-                        "geo" to emptyMap<String, Any?>(),
-                        "marking" to emptyMap<String, Any?>(),
-                        "registry" to mapOf<String, Any?>(
-                            "data" to emptyMap<String, Any?>()
-                        ),
-                        "software" to emptyMap<String, Any?>(),
-                        "x509" to mapOf<String, Any?>(
-                            "issuer" to emptyMap<String, Any?>(),
-                            "subject" to emptyMap<String, Any?>()
-                        )
-                    ),
-                    "matched" to emptyMap<String, Any?>()
-                ),
-                "feed" to emptyMap<String, Any?>(),
-                "group" to emptyMap<String, Any?>(),
-                "indicator" to mapOf<String, Any?>(
-                    "as" to mapOf<String, Any?>(
-                        "organization" to emptyMap<String, Any?>()
-                    ),
-                    "email" to emptyMap<String, Any?>(),
-                    "file" to mapOf<String, Any?>(
-                        "code_signature" to emptyMap<String, Any?>(),
-                        "elf" to mapOf<String, Any?>(
-                            "header" to emptyMap<String, Any?>(),
-                            "sections" to emptyMap<String, Any?>(),
-                            "segments" to emptyMap<String, Any?>()
-                        ),
-                        "hash" to emptyMap<String, Any?>(),
-                        "pe" to mapOf<String, Any?>(
-                            "sections" to emptyMap<String, Any?>()
-                        ),
-                        "x509" to mapOf<String, Any?>(
-                            "issuer" to emptyMap<String, Any?>(),
-                            "subject" to emptyMap<String, Any?>()
-                        )
-                    ),
-                    "geo" to emptyMap<String, Any?>(),
-                    "marking" to emptyMap<String, Any?>(),
-                    "registry" to mapOf<String, Any?>(
-                        "data" to emptyMap<String, Any?>()
-                    ),
-                    "x509" to mapOf<String, Any?>(
-                        "issuer" to emptyMap<String, Any?>(),
-                        "subject" to emptyMap<String, Any?>()
-                    )
-                ),
-                "software" to emptyMap<String, Any?>(),
-                "tactic" to emptyMap<String, Any?>(),
-                "technique" to mapOf<String, Any?>("subtechnique" to emptyMap<String, Any?>())
+            "event" to mapOf<String, Any?>(
+                "id" to "285c2315-f92d-4ba7-ab87-fbe3a31ee378"
+            ),
+            "space" to mapOf<String, Any?>(
+                "name" to "standard"
             )
         )
 
@@ -398,10 +429,13 @@ internal class PluginActionTests {
         assertTrue(indexRequestSlot.isCaptured)
 
         val indexedSource = indexRequestSlot.captured.source().utf8ToString()
-        assertTrue(indexedSource.contains("\"file\""), "expected wazuh.file to be preserved")
         assertTrue(indexedSource.contains("\"agent\""), "expected wazuh.agent to be preserved")
+        assertTrue(indexedSource.contains("\"syscheck\""), "expected wazuh.protocol.location to be preserved")
+        assertTrue(indexedSource.contains("\"rule\""), "expected wazuh.rule to be preserved")
+        assertTrue(indexedSource.contains("95cbac32-7a12-4b63-b85d-0a4d598b74e9"), "expected wazuh.rule.sigma_id to be preserved")
         assertTrue(indexedSource.contains("\"threat\""), "expected wazuh.threat to be preserved")
-        assertTrue(indexedSource.contains("\"technique\""), "expected wazuh.technique to be preserved")
+        assertTrue(indexedSource.contains("\"hash_sha256\""), "expected wazuh.threat.enrichments indicator data to be preserved")
+        assertTrue(indexedSource.contains("\"file.hash.sha256\""), "expected wazuh.threat.enrichments.matched.field to be preserved")
         assertTrue(indexedSource.contains("\"active_response\""), "expected active_response block to be present")
         assertTrue(indexedSource.contains("\"doc_id\":\"doc-1\""))
     }
