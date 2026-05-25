@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Implement batch Active Response indexing using BulkProcessor [(#67)](https://github.com/wazuh/wazuh-indexer-notifications/pull/67)
 - Add revert bump functionality to repository bumper workflow [(#58)](https://github.com/wazuh/wazuh-indexer-notifications/pull/58)
 - Create default notification channels on startup [(#68)](https://github.com/wazuh/wazuh-indexer-notifications/pull/68)
+- Active Response events completeness [(#105)](https://github.com/wazuh/wazuh-indexer-notifications/pull/105)
 
 ### Dependencies
 -
