@@ -12,12 +12,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Implement batch Active Response indexing using BulkProcessor [(#67)](https://github.com/wazuh/wazuh-indexer-notifications/pull/67)
 - Add revert bump functionality to repository bumper workflow [(#58)](https://github.com/wazuh/wazuh-indexer-notifications/pull/58)
 - Create default notification channels on startup [(#68)](https://github.com/wazuh/wazuh-indexer-notifications/pull/68)
+- Active Response events completeness [(#105)](https://github.com/wazuh/wazuh-indexer-notifications/pull/105)
 
 ### Dependencies
 -
 
 ### Changed
--
+- Bump actions to NodeJS 24 [(#14)](https://github.com/wazuh/wazuh-indexer-notifications/pull/14)
 
 ### Deprecated
 -
@@ -32,4 +33,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Security
 -
 
-[Unreleased 5.0.x]: https://github.com/wazuh/wazuh-indexer-notifications/compare/0ea5fdda7f430a0efe11b9465ad4c3d4f2a3776e...main
+[Unreleased 5.0.x]: https://github.com/wazuh/wazuh-indexer-notifications/compare/1929b1cf1d6b05d830b58916a8d1d6182f2f5ad8...main
