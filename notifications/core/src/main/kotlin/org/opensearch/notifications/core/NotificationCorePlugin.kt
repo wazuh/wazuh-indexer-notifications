@@ -38,7 +38,7 @@ class NotificationCorePlugin : ReloadablePlugin, Plugin(), ExtensiblePlugin {
     internal companion object {
         private val log by logger(NotificationCorePlugin::class.java)
 
-        const val PLUGIN_NAME = "opensearch-notifications-core"
+        const val PLUGIN_NAME = "wazuh-indexer-notifications-core"
         const val LOG_PREFIX = "notifications-core"
     }
 
