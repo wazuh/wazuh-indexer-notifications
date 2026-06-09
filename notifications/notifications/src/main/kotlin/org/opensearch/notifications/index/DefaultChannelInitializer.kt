@@ -68,8 +68,7 @@ object DefaultChannelInitializer {
             id = "default_slack_channel",
             config = NotificationConfig(
                 name = "Slack Channel",
-                description = "Default Slack notification channel. A sample monitor is created automatically. " +
-                    "Go to Alerting > Monitors to review it and configure this channel before enabling alerts.",
+                description = "Default Slack notification channel.",
                 configType = ConfigType.SLACK,
                 isEnabled = false,
                 configData = Slack(
@@ -82,9 +81,7 @@ object DefaultChannelInitializer {
             config = NotificationConfig(
                 name = "Jira Channel",
                 description = "Default Jira notification channel.\n\n" +
-                    "Configure your Jira domain and authentication (use a Base64-encoded 'email:api_token' " +
-                    "in the Authorization header). A sample monitor is created automatically — go to " +
-                    "Alerting > Monitors to review it and enable the action once this channel is configured.",
+                    "Configure your Jira domain and authentication (use a Base64-encoded 'email:api_token' in the Authorization header).",
                 configType = ConfigType.WEBHOOK,
                 isEnabled = false,
                 configData = Webhook(
@@ -102,9 +99,7 @@ object DefaultChannelInitializer {
             config = NotificationConfig(
                 name = "PagerDuty Channel",
                 description = "Default PagerDuty notification channel.\n\n" +
-                    "Configure a PagerDuty integration and set its Integration Key in the 'X-Routing-Key' " +
-                    "header below. A sample monitor is created automatically — go to Alerting > Monitors " +
-                    "to review it and enable the action once this channel is configured.",
+                    "Configure a PagerDuty integration and set its Integration Key in the 'X-Routing-Key' header below.",
                 configType = ConfigType.WEBHOOK,
                 isEnabled = false,
                 configData = Webhook(
@@ -121,8 +116,7 @@ object DefaultChannelInitializer {
             id = "default_shuffle_channel",
             config = NotificationConfig(
                 name = "Shuffle Channel",
-                description = "Default Shuffle notification channel. A sample monitor is created automatically. " +
-                    "Go to Alerting > Monitors to review it and configure this channel before enabling workflows.",
+                description = "Default Shuffle notification channel.",
                 configType = ConfigType.WEBHOOK,
                 isEnabled = false,
                 configData = Webhook(
