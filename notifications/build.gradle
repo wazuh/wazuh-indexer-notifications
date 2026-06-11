@@ -5,7 +5,7 @@
 
 
 buildscript {
-    
+
     ext {
         opensearch_version = System.getProperty("opensearch.version", "3.6.0-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
@@ -23,6 +23,7 @@ buildscript {
         if (isSnapshot) {
             opensearch_build += "-SNAPSHOT"
         }
+        
         opensearch_no_snapshot = opensearch_version.replace("-SNAPSHOT","")
         // Resolved from wazuh-indexer-common-utils via mavenLocal() (published in CI before build)
         common_utils_version = System.getProperty("common_utils.version", "${wazuh_version}.${revision}")
