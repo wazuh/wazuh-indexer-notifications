@@ -18,12 +18,14 @@ buildscript {
         opensearch_build = version_tokens[0] + '.0'
         plugin_no_snapshot = opensearch_build
         if (buildVersionQualifier) {
+            
             opensearch_build += "-${buildVersionQualifier}"
         }
+
         if (isSnapshot) {
             opensearch_build += "-SNAPSHOT"
         }
-        
+
         opensearch_no_snapshot = opensearch_version.replace("-SNAPSHOT","")
         // Resolved from wazuh-indexer-common-utils via mavenLocal() (published in CI before build)
         common_utils_version = System.getProperty("common_utils.version", "${wazuh_version}.${revision}")
