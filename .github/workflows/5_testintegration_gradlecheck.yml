@@ -7,8 +7,8 @@ on:
   pull_request:
     types: [opened, synchronize, ready_for_review]
     paths:
-      - "src/**" # Match changes in source files.
-      - "*.gradle" # Match changes in Gradle configuration.
+      - "**/src/**" # Match changes in source files.
+      - "**/*.gradle" # Match changes in Gradle configuration.
 
 jobs:
   branches:
