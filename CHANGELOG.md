@@ -3,7 +3,7 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). See the [CONTRIBUTING guide](./CONTRIBUTING.md#changelog) for instructions on how to add changelog entries.
 
-## [Unreleased 5.0.x]
+## [v5.0.0]
 ### Added
 - Initialize repository. [(#2)](https://github.com/wazuh/wazuh-indexer-notifications/issues/2)
 - Implement wazuh-indexer-common-utils usage [(#17)](https://github.com/wazuh/wazuh-indexer-notifications/pull/17)
@@ -33,5 +33,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Security
 -
+
+## Prior versions
+
+There are no prior versions. This is the initial release of Wazuh Indexer.
 
 [Unreleased 5.0.x]: https://github.com/wazuh/wazuh-indexer-notifications/compare/1929b1cf1d6b05d830b58916a8d1d6182f2f5ad8...main
