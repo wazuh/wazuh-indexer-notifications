@@ -39,6 +39,7 @@ import org.opensearch.notifications.metrics.Metrics
 import org.opensearch.notifications.model.DocMetadata
 import org.opensearch.notifications.model.NotificationConfigDoc
 import org.opensearch.notifications.security.UserAccess
+import org.opensearch.notifications.settings.PluginSettings
 import java.time.Instant
 /**
  * NotificationConfig indexing operation actions.
@@ -226,6 +227,18 @@ object ConfigIndexingActions {
         log.info("$LOG_PREFIX:NotificationConfig-create")
         userAccess.validateUser(user)
         validateConfig(request.notificationConfig, user)
+        val count = try {
+            NotificationConfigIndex.countNotificationConfigs()
+        } catch (e: Exception) {
+            log.warn("$LOG_PREFIX:Failed to count notification configs for limit check: ${e.message}")
+            -1L
+        }
+        if (count >= 0 && count >= PluginSettings.maxNotificationConfigs) {
+            throw OpenSearchStatusException(
+                "This request would exceed the maximum allowed notification configs [${PluginSettings.maxNotificationConfigs}].",
+                RestStatus.BAD_REQUEST
+            )
+        }
         val currentTime = Instant.now()
         val metadata = DocMetadata(
             currentTime,

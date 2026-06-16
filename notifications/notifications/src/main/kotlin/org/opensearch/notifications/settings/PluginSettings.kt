@@ -66,6 +66,11 @@ internal object PluginSettings {
     private const val DEFAULT_ITEMS_QUERY_COUNT_KEY = "$GENERAL_KEY_PREFIX.default_items_query_count"
 
     /**
+     * Maximum number of notification channel configurations allowed.
+     */
+    private const val MAX_NOTIFICATION_CONFIGS_KEY = "$GENERAL_KEY_PREFIX.max_notification_configs"
+
+    /**
      * Legacy alerting plugin filter_by_backend_roles setting.
      */
     private const val LEGACY_ALERTING_FILTER_BY_BACKEND_ROLES_KEY = "opendistro.alerting.filter_by_backend_roles"
@@ -101,6 +106,16 @@ internal object PluginSettings {
     private const val MINIMUM_ITEMS_QUERY_COUNT = 10
 
     /**
+     * Default maximum number of notification channel configurations.
+     */
+    private const val DEFAULT_MAX_NOTIFICATION_CONFIGS_VALUE = 100
+
+    /**
+     * Minimum allowed value for the max notification configs setting.
+     */
+    private const val MINIMUM_MAX_NOTIFICATION_CONFIGS = 0
+
+    /**
      * Default bulk flush interval for active response (ms).
      */
     private const val DEFAULT_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS = 500L
@@ -131,6 +146,12 @@ internal object PluginSettings {
      */
     @Volatile
     var defaultItemsQueryCount: Int
+
+    /**
+     * Maximum number of notification channel configurations allowed.
+     */
+    @Volatile
+    var maxNotificationConfigs: Int
 
     /**
      * Bulk flush interval for active response indexing (ms).
@@ -167,13 +188,16 @@ internal object PluginSettings {
         operationTimeoutMs = (settings?.get(OPERATION_TIMEOUT_MS_KEY)?.toLong()) ?: DEFAULT_OPERATION_TIMEOUT_MS
         defaultItemsQueryCount = (settings?.get(DEFAULT_ITEMS_QUERY_COUNT_KEY)?.toInt())
             ?: DEFAULT_ITEMS_QUERY_COUNT_VALUE
+        maxNotificationConfigs = (settings?.get(MAX_NOTIFICATION_CONFIGS_KEY)?.toInt())
+            ?: DEFAULT_MAX_NOTIFICATION_CONFIGS_VALUE
         activeResponseBulkFlushIntervalMs = (settings?.get(ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS_KEY)?.toLong())
             ?: DEFAULT_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS
         activeResponseBulkMaxActions = (settings?.get(ACTIVE_RESPONSE_BULK_MAX_ACTIONS_KEY)?.toInt())
             ?: DEFAULT_ACTIVE_RESPONSE_BULK_MAX_ACTIONS
         defaultSettings = mapOf(
             OPERATION_TIMEOUT_MS_KEY to operationTimeoutMs.toString(DECIMAL_RADIX),
-            DEFAULT_ITEMS_QUERY_COUNT_KEY to defaultItemsQueryCount.toString(DECIMAL_RADIX)
+            DEFAULT_ITEMS_QUERY_COUNT_KEY to defaultItemsQueryCount.toString(DECIMAL_RADIX),
+            MAX_NOTIFICATION_CONFIGS_KEY to maxNotificationConfigs.toString(DECIMAL_RADIX)
         )
     }
 
@@ -189,6 +213,14 @@ internal object PluginSettings {
         DEFAULT_ITEMS_QUERY_COUNT_KEY,
         defaultSettings[DEFAULT_ITEMS_QUERY_COUNT_KEY]!!.toInt(),
         MINIMUM_ITEMS_QUERY_COUNT,
+        NodeScope,
+        Dynamic
+    )
+
+    val MAX_NOTIFICATION_CONFIGS: Setting<Int> = Setting.intSetting(
+        MAX_NOTIFICATION_CONFIGS_KEY,
+        defaultSettings[MAX_NOTIFICATION_CONFIGS_KEY]!!.toInt(),
+        MINIMUM_MAX_NOTIFICATION_CONFIGS,
         NodeScope,
         Dynamic
     )
@@ -293,6 +325,7 @@ internal object PluginSettings {
         return listOf(
             OPERATION_TIMEOUT_MS,
             DEFAULT_ITEMS_QUERY_COUNT,
+            MAX_NOTIFICATION_CONFIGS,
             ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS,
             ACTIVE_RESPONSE_BULK_MAX_ACTIONS,
             FILTER_BY_BACKEND_ROLES,
@@ -311,6 +344,7 @@ internal object PluginSettings {
     private fun updateSettingValuesFromLocal(clusterService: ClusterService) {
         operationTimeoutMs = OPERATION_TIMEOUT_MS.get(clusterService.settings)
         defaultItemsQueryCount = DEFAULT_ITEMS_QUERY_COUNT.get(clusterService.settings)
+        maxNotificationConfigs = MAX_NOTIFICATION_CONFIGS.get(clusterService.settings)
         activeResponseBulkFlushIntervalMs = ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS.get(clusterService.settings)
         activeResponseBulkMaxActions = ACTIVE_RESPONSE_BULK_MAX_ACTIONS.get(clusterService.settings)
     }
@@ -330,6 +364,11 @@ internal object PluginSettings {
         if (clusterDefaultItemsQueryCount != null) {
             log.debug("$LOG_PREFIX:$DEFAULT_ITEMS_QUERY_COUNT_KEY -autoUpdatedTo-> $clusterDefaultItemsQueryCount")
             defaultItemsQueryCount = clusterDefaultItemsQueryCount
+        }
+        val clusterMaxNotificationConfigs = clusterService.clusterSettings.get(MAX_NOTIFICATION_CONFIGS)
+        if (clusterMaxNotificationConfigs != null) {
+            log.debug("$LOG_PREFIX:$MAX_NOTIFICATION_CONFIGS_KEY -autoUpdatedTo-> $clusterMaxNotificationConfigs")
+            maxNotificationConfigs = clusterMaxNotificationConfigs
         }
         // ACTIVE_RESPONSE_BULK_* settings are NodeScope-only; they are read once in
         // updateSettingValuesFromLocal at startup and cannot change at runtime, so
@@ -355,6 +394,10 @@ internal object PluginSettings {
             defaultItemsQueryCount = it
             log.info("$LOG_PREFIX:$DEFAULT_ITEMS_QUERY_COUNT_KEY -updatedTo-> $it")
         }
+        clusterService.clusterSettings.addSettingsUpdateConsumer(MAX_NOTIFICATION_CONFIGS) {
+            maxNotificationConfigs = it
+            log.info("$LOG_PREFIX:$MAX_NOTIFICATION_CONFIGS_KEY -updatedTo-> $it")
+        }
         // No update consumers for ACTIVE_RESPONSE_BULK_* — those settings are NodeScope-only
         // and cannot change at runtime (BulkProcessor has no live-reconfig API).
     }
@@ -364,6 +407,7 @@ internal object PluginSettings {
     fun reset() {
         operationTimeoutMs = DEFAULT_OPERATION_TIMEOUT_MS
         defaultItemsQueryCount = DEFAULT_ITEMS_QUERY_COUNT_VALUE
+        maxNotificationConfigs = DEFAULT_MAX_NOTIFICATION_CONFIGS_VALUE
         activeResponseBulkFlushIntervalMs = DEFAULT_ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS
         activeResponseBulkMaxActions = DEFAULT_ACTIVE_RESPONSE_BULK_MAX_ACTIONS
     }

@@ -181,6 +181,29 @@ internal object NotificationConfigIndex : ConfigOperations {
     }
 
     /**
+     * Count all notification config documents in the index.
+     * Returns 0 if the index does not exist yet.
+     * @return total number of notification configs
+     */
+    suspend fun countNotificationConfigs(): Long {
+        if (!isIndexExists()) {
+            return 0L
+        }
+        val sourceBuilder = SearchSourceBuilder()
+            .timeout(TimeValue(PluginSettings.operationTimeoutMs, TimeUnit.MILLISECONDS))
+            .size(0)
+            .trackTotalHits(true)
+        val searchRequest = SearchDataObjectRequest.builder()
+            .indices(INDEX_NAME)
+            .searchSourceBuilder(sourceBuilder)
+            .build()
+        val response: SearchResponse = sdkClient.suspendUntilTimeout(PluginSettings.operationTimeoutMs) {
+            sdkClient.searchDataObjectAsync(searchRequest).whenComplete(it)
+        }
+        return response.hits.totalHits?.value ?: 0L
+    }
+
+    /**
      * {@inheritDoc}
      */
     override suspend fun createNotificationConfig(configDoc: NotificationConfigDoc, id: String?): String? {
