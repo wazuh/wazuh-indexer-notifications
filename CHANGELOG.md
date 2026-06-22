@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Add revert bump functionality to repository bumper workflow [(#58)](https://github.com/wazuh/wazuh-indexer-notifications/pull/58)
 - Create default notification channels on startup [(#68)](https://github.com/wazuh/wazuh-indexer-notifications/pull/68)
 - Active Response events completeness [(#105)](https://github.com/wazuh/wazuh-indexer-notifications/pull/105)
+- Add limit for the number of notification channels [(#118)](https://github.com/wazuh/wazuh-indexer-notifications/pull/118)
 
 ### Dependencies
 -
