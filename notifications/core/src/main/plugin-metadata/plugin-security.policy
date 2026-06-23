@@ -16,8 +16,6 @@ grant {
     // needed because of problems in ClientConfiguration
     // TODO: get these fixed in aws sdk
     permission java.lang.RuntimePermission "accessDeclaredMembers";
-    permission java.lang.RuntimePermission "getClassLoader";
-    permission java.net.SocketPermission "*", "connect";
     // Needed because of problems in AmazonSNS:
     // When no region is set on a STSClient instance, the
     // AWS SDK loads all known partitions from a JSON file and
