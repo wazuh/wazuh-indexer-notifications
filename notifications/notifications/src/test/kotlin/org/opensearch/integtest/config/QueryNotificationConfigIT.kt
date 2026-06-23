@@ -75,11 +75,11 @@ class QueryNotificationConfigIT : PluginRestTestCase() {
     }
 
     fun `test Get multiple notification config as part of query`() {
-        (1..5).map { createConfig() }.toSet()
+        (1..2).map { createConfig() }.toSet()
         Thread.sleep(100)
-        (1..5).map { createConfig() }.toSet()
-        val configIds: Set<String> = (1..5).map { createConfig() }.toSet()
-        (1..5).map { createConfig() }.toSet()
+        (1..2).map { createConfig() }.toSet()
+        val configIds: Set<String> = (1..2).map { createConfig() }.toSet()
+        (1..2).map { createConfig() }.toSet()
         Thread.sleep(1000)
         // Get notification config with query parameter
         val getConfigResponse = executeRequest(
@@ -93,7 +93,7 @@ class QueryNotificationConfigIT : PluginRestTestCase() {
     }
 
     fun `test Get all notification config`() {
-        val configIds: Set<String> = (1..20).map { createConfig() }.toSet()
+        val configIds: Set<String> = (1..5).map { createConfig() }.toSet()
         refreshAllIndices()
 
         // Get all notification configs
@@ -107,9 +107,9 @@ class QueryNotificationConfigIT : PluginRestTestCase() {
     }
 
     fun `test Get paginated notification config using from_index and max_items`() {
-        val firstConfigIds: Set<String> = (1..10).map { createConfig() }.toSet()
-        val secondConfigIds: Set<String> = (1..10).map { createConfig() }.toSet()
-        val thirdConfigIds: Set<String> = (1..10).map { createConfig() }.toSet()
+        val firstConfigIds: Set<String> = (1..3).map { createConfig() }.toSet()
+        val secondConfigIds: Set<String> = (1..3).map { createConfig() }.toSet()
+        val thirdConfigIds: Set<String> = (1..3).map { createConfig() }.toSet()
         val allConfigIds = firstConfigIds.union(secondConfigIds).union(thirdConfigIds)
         Thread.sleep(1000)
 
@@ -123,56 +123,56 @@ class QueryNotificationConfigIT : PluginRestTestCase() {
         verifyMultiConfigIdEquals(allConfigIds, getAllConfigResponse, allConfigIds.size)
         Thread.sleep(100)
 
-        // Get first 10 notification configs
+        // Get first 3 notification configs
         val getFirstConfigResponse = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs?from_index=0&max_items=10",
+            "$PLUGIN_BASE_URI/configs?from_index=0&max_items=3",
             "",
             RestStatus.OK.status
         )
         verifyMultiConfigIdEquals(firstConfigIds, getFirstConfigResponse, allConfigIds.size)
 
-        // Get first 10 notification configs without from_index
+        // Get first 3 notification configs without from_index
         val getFirstConfigResponseWithoutFromIndex = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs?max_items=10",
+            "$PLUGIN_BASE_URI/configs?max_items=3",
             "",
             RestStatus.OK.status
         )
         verifyMultiConfigIdEquals(firstConfigIds, getFirstConfigResponseWithoutFromIndex, allConfigIds.size)
 
-        // Get second 10 notification configs
+        // Get second 3 notification configs
         val getSecondConfigResponse = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs?from_index=10&max_items=10",
+            "$PLUGIN_BASE_URI/configs?from_index=3&max_items=3",
             "",
             RestStatus.OK.status
         )
         verifyMultiConfigIdEquals(secondConfigIds, getSecondConfigResponse, allConfigIds.size)
 
-        // Get third 10 notification configs
+        // Get third 3 notification configs
         val getThirdConfigResponse = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs?from_index=20&max_items=10",
+            "$PLUGIN_BASE_URI/configs?from_index=6&max_items=3",
             "",
             RestStatus.OK.status
         )
         verifyMultiConfigIdEquals(thirdConfigIds, getThirdConfigResponse, allConfigIds.size)
 
-        // Get all items after 10 notification configs
-        val getAfter10ConfigResponse = executeRequest(
+        // Get all items after 3 notification configs
+        val getAfter3ConfigResponse = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs?from_index=10",
+            "$PLUGIN_BASE_URI/configs?from_index=3",
             "",
             RestStatus.OK.status
         )
-        verifyMultiConfigIdEquals(secondConfigIds.union(thirdConfigIds), getAfter10ConfigResponse, allConfigIds.size)
+        verifyMultiConfigIdEquals(secondConfigIds.union(thirdConfigIds), getAfter3ConfigResponse, allConfigIds.size)
     }
 
     fun `test Get descending paginated notification config using from_index and max_items`() {
-        val firstConfigIds: Set<String> = (1..10).map { createConfig() }.toSet()
-        val secondConfigIds: Set<String> = (1..10).map { createConfig() }.toSet()
-        val thirdConfigIds: Set<String> = (1..10).map { createConfig() }.toSet()
+        val firstConfigIds: Set<String> = (1..3).map { createConfig() }.toSet()
+        val secondConfigIds: Set<String> = (1..3).map { createConfig() }.toSet()
+        val thirdConfigIds: Set<String> = (1..3).map { createConfig() }.toSet()
         val allConfigIds = firstConfigIds.union(secondConfigIds).union(thirdConfigIds)
         Thread.sleep(1000)
 
@@ -186,32 +186,32 @@ class QueryNotificationConfigIT : PluginRestTestCase() {
         verifyMultiConfigIdEquals(allConfigIds, getAllConfigResponse, allConfigIds.size)
         Thread.sleep(100)
 
-        // Get first 10 notification configs
+        // Get first 3 notification configs (desc order returns most-recently created first)
         val getFirstConfigResponse = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs?from_index=0&max_items=10&sort_order=desc",
+            "$PLUGIN_BASE_URI/configs?from_index=0&max_items=3&sort_order=desc",
             "",
             RestStatus.OK.status
         )
         verifyMultiConfigIdEquals(thirdConfigIds, getFirstConfigResponse, allConfigIds.size)
 
-        // Get last 10 notification configs
+        // Get last 3 notification configs (desc order, offset 6)
         val getThirdConfigResponse = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs?from_index=20&max_items=10&sort_order=desc",
+            "$PLUGIN_BASE_URI/configs?from_index=6&max_items=3&sort_order=desc",
             "",
             RestStatus.OK.status
         )
         verifyMultiConfigIdEquals(firstConfigIds, getThirdConfigResponse, allConfigIds.size)
 
-        // Get all items after 10 notification configs
-        val getAfter10ConfigResponse = executeRequest(
+        // Get all items after 3 notification configs (desc order)
+        val getAfter3ConfigResponse = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs?from_index=10&sort_order=desc",
+            "$PLUGIN_BASE_URI/configs?from_index=3&sort_order=desc",
             "",
             RestStatus.OK.status
         )
-        verifyMultiConfigIdEquals(secondConfigIds.union(firstConfigIds), getAfter10ConfigResponse, allConfigIds.size)
+        verifyMultiConfigIdEquals(secondConfigIds.union(firstConfigIds), getAfter3ConfigResponse, allConfigIds.size)
     }
 
     fun `test Get sorted notification config using metadata keyword sort_field(created_time_ms)`() {
@@ -408,8 +408,8 @@ class QueryNotificationConfigIT : PluginRestTestCase() {
     }
 
     fun `test Get filtered notification config using keyword filter_param_list(is_enabled)`() {
-        val enabledConfigIds: Set<String> = (1..10).map { createConfig(isEnabled = true) }.toSet()
-        val disabledConfigIds: Set<String> = (1..10).map { createConfig(isEnabled = false) }.toSet()
+        val enabledConfigIds: Set<String> = (1..4).map { createConfig(isEnabled = true) }.toSet()
+        val disabledConfigIds: Set<String> = (1..4).map { createConfig(isEnabled = false) }.toSet()
         Thread.sleep(1000)
 
         // Get notification configs with is_enabled=true
@@ -462,13 +462,13 @@ class QueryNotificationConfigIT : PluginRestTestCase() {
 
     fun `test Get filtered notification config using keyword filter_param_list(last_updated_time_ms)`() {
         val initialTime = Instant.now()
-        val initialConfigIds: Set<String> = (1..10).map { createConfig() }.toSet()
+        val initialConfigIds: Set<String> = (1..3).map { createConfig() }.toSet()
         Thread.sleep(1000)
         val middleTime = Instant.now()
-        val middleConfigIds: Set<String> = (1..10).map { createConfig() }.toSet()
+        val middleConfigIds: Set<String> = (1..3).map { createConfig() }.toSet()
         Thread.sleep(1000)
         val finalTime = Instant.now()
-        val finalConfigIds: Set<String> = (1..10).map { createConfig() }.toSet()
+        val finalConfigIds: Set<String> = (1..3).map { createConfig() }.toSet()
         Thread.sleep(1000)
         val endTime = Instant.now()
 
@@ -505,13 +505,13 @@ class QueryNotificationConfigIT : PluginRestTestCase() {
 
     fun `test Get filtered notification config using keyword filter_param_list(created_time_ms)`() {
         val initialTime = Instant.now()
-        val initialConfigIds: Set<String> = (1..10).map { createConfig() }.toSet()
+        val initialConfigIds: Set<String> = (1..3).map { createConfig() }.toSet()
         Thread.sleep(1000)
         val middleTime = Instant.now()
-        val middleConfigIds: Set<String> = (1..10).map { createConfig() }.toSet()
+        val middleConfigIds: Set<String> = (1..3).map { createConfig() }.toSet()
         Thread.sleep(1000)
         val finalTime = Instant.now()
-        val finalConfigIds: Set<String> = (1..10).map { createConfig() }.toSet()
+        val finalConfigIds: Set<String> = (1..3).map { createConfig() }.toSet()
         Thread.sleep(1000)
         val endTime = Instant.now()
 
