@@ -239,6 +239,54 @@ object ConfigIndexingActions {
                 RestStatus.BAD_REQUEST
             )
         }
+        when (request.notificationConfig.configType) {
+            ConfigType.EMAIL_GROUP -> {
+                val groupCount = try {
+                    NotificationConfigIndex.countNotificationConfigsByType(ConfigType.EMAIL_GROUP.tag)
+                } catch (e: Exception) {
+                    log.warn("$LOG_PREFIX:Failed to count notification groups for limit check: ${e.message}")
+                    -1L
+                }
+                if (groupCount >= 0 && groupCount >= PluginSettings.maxNotificationGroups) {
+                    throw OpenSearchStatusException(
+                        "This request would exceed the maximum allowed notification groups [${PluginSettings.maxNotificationGroups}].",
+                        RestStatus.BAD_REQUEST
+                    )
+                }
+            }
+            ConfigType.SMTP_ACCOUNT, ConfigType.SES_ACCOUNT -> {
+                val senderCount = try {
+                    NotificationConfigIndex.countNotificationConfigsByType(
+                        ConfigType.SMTP_ACCOUNT.tag,
+                        ConfigType.SES_ACCOUNT.tag
+                    )
+                } catch (e: Exception) {
+                    log.warn("$LOG_PREFIX:Failed to count notification senders for limit check: ${e.message}")
+                    -1L
+                }
+                if (senderCount >= 0 && senderCount >= PluginSettings.maxNotificationSenders) {
+                    throw OpenSearchStatusException(
+                        "This request would exceed the maximum allowed notification senders [${PluginSettings.maxNotificationSenders}].",
+                        RestStatus.BAD_REQUEST
+                    )
+                }
+            }
+            ConfigType.ACTIVE_RESPONSE -> {
+                val activeResponseCount = try {
+                    NotificationConfigIndex.countNotificationConfigsByType(ConfigType.ACTIVE_RESPONSE.tag)
+                } catch (e: Exception) {
+                    log.warn("$LOG_PREFIX:Failed to count active responses for limit check: ${e.message}")
+                    -1L
+                }
+                if (activeResponseCount >= 0 && activeResponseCount >= PluginSettings.maxActiveResponses) {
+                    throw OpenSearchStatusException(
+                        "This request would exceed the maximum allowed active responses [${PluginSettings.maxActiveResponses}].",
+                        RestStatus.BAD_REQUEST
+                    )
+                }
+            }
+            else -> {}
+        }
         val currentTime = Instant.now()
         val metadata = DocMetadata(
             currentTime,
