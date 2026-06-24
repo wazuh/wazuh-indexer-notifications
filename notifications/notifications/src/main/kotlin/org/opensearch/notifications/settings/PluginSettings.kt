@@ -68,7 +68,7 @@ internal object PluginSettings {
     /**
      * Maximum number of notification channel configurations allowed.
      */
-    private const val MAX_NOTIFICATION_CONFIGS_KEY = "$GENERAL_KEY_PREFIX.max_notification_configs"
+    private const val MAX_NOTIFICATION_CONFIGS_KEY = "plugins.notifications.general.max_notification_configs"
 
     /**
      * Maximum number of notification groups (email groups) allowed.
