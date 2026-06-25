@@ -33,7 +33,7 @@ jobs:
     outputs:
       common_utils_ref: ${{ steps.resolve.outputs.wazuh_indexer_common_utils_branch }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Resolve branches
         id: resolve
@@ -51,7 +51,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
           sparse-checkout: |
@@ -111,7 +111,7 @@ jobs:
 
       # notifications
       - name: Checkout Notifications
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Restore Maven Local Cache
         uses: actions/cache/restore@v6
