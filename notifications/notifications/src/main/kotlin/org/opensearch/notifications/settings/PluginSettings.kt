@@ -68,17 +68,17 @@ internal object PluginSettings {
     /**
      * Maximum number of notification channel configurations allowed.
      */
-    private const val MAX_NOTIFICATION_CONFIGS_KEY = "plugins.notifications.general.max_notification_configs"
+    private const val MAX_NOTIFICATION_CONFIGS_KEY = "plugins.notifications.max_notification_configs"
 
     /**
      * Maximum number of notification groups (email groups) allowed.
      */
-    private const val MAX_NOTIFICATION_GROUPS_KEY = "plugins.notifications.general.max_notification_groups"
+    private const val MAX_NOTIFICATION_GROUPS_KEY = "plugins.notifications.max_notification_groups"
 
     /**
      * Maximum number of notification senders (SMTP/SES accounts) allowed.
      */
-    private const val MAX_NOTIFICATION_SENDERS_KEY = "plugins.notifications.general.max_notification_senders"
+    private const val MAX_NOTIFICATION_SENDERS_KEY = "plugins.notifications.max_notification_senders"
 
     /**
      * Maximum number of active response configurations allowed.
@@ -123,7 +123,7 @@ internal object PluginSettings {
     /**
      * Default maximum number of notification channel configurations.
      */
-    private const val DEFAULT_MAX_NOTIFICATION_CONFIGS_VALUE = 10
+    private const val DEFAULT_MAX_NOTIFICATION_CONFIGS_VALUE = 40
 
     /**
      * Minimum allowed value for the max notification configs setting.
