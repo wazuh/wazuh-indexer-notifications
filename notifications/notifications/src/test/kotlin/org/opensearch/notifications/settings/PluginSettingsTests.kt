@@ -81,6 +81,10 @@ internal class PluginSettingsTests {
                 setOf(
                     PluginSettings.OPERATION_TIMEOUT_MS,
                     PluginSettings.DEFAULT_ITEMS_QUERY_COUNT,
+                    PluginSettings.MAX_NOTIFICATION_CONFIGS,
+                    PluginSettings.MAX_NOTIFICATION_GROUPS,
+                    PluginSettings.MAX_NOTIFICATION_SENDERS,
+                    PluginSettings.MAX_ACTIVE_RESPONSES,
                     PluginSettings.ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS,
                     PluginSettings.ACTIVE_RESPONSE_BULK_MAX_ACTIONS
                 )
@@ -107,6 +111,10 @@ internal class PluginSettingsTests {
                 setOf(
                     PluginSettings.OPERATION_TIMEOUT_MS,
                     PluginSettings.DEFAULT_ITEMS_QUERY_COUNT,
+                    PluginSettings.MAX_NOTIFICATION_CONFIGS,
+                    PluginSettings.MAX_NOTIFICATION_GROUPS,
+                    PluginSettings.MAX_NOTIFICATION_SENDERS,
+                    PluginSettings.MAX_ACTIVE_RESPONSES,
                     PluginSettings.ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS,
                     PluginSettings.ACTIVE_RESPONSE_BULK_MAX_ACTIONS
                 )
@@ -136,6 +144,10 @@ internal class PluginSettingsTests {
                 setOf(
                     PluginSettings.OPERATION_TIMEOUT_MS,
                     PluginSettings.DEFAULT_ITEMS_QUERY_COUNT,
+                    PluginSettings.MAX_NOTIFICATION_CONFIGS,
+                    PluginSettings.MAX_NOTIFICATION_GROUPS,
+                    PluginSettings.MAX_NOTIFICATION_SENDERS,
+                    PluginSettings.MAX_ACTIVE_RESPONSES,
                     PluginSettings.ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS,
                     PluginSettings.ACTIVE_RESPONSE_BULK_MAX_ACTIONS,
                     PluginSettings.FILTER_BY_BACKEND_ROLES
@@ -161,6 +173,10 @@ internal class PluginSettingsTests {
                 setOf(
                     PluginSettings.OPERATION_TIMEOUT_MS,
                     PluginSettings.DEFAULT_ITEMS_QUERY_COUNT,
+                    PluginSettings.MAX_NOTIFICATION_CONFIGS,
+                    PluginSettings.MAX_NOTIFICATION_GROUPS,
+                    PluginSettings.MAX_NOTIFICATION_SENDERS,
+                    PluginSettings.MAX_ACTIVE_RESPONSES,
                     PluginSettings.ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS,
                     PluginSettings.ACTIVE_RESPONSE_BULK_MAX_ACTIONS,
                     PluginSettings.LEGACY_ALERTING_FILTER_BY_BACKEND_ROLES,
@@ -187,6 +203,10 @@ internal class PluginSettingsTests {
                 setOf(
                     PluginSettings.OPERATION_TIMEOUT_MS,
                     PluginSettings.DEFAULT_ITEMS_QUERY_COUNT,
+                    PluginSettings.MAX_NOTIFICATION_CONFIGS,
+                    PluginSettings.MAX_NOTIFICATION_GROUPS,
+                    PluginSettings.MAX_NOTIFICATION_SENDERS,
+                    PluginSettings.MAX_ACTIVE_RESPONSES,
                     PluginSettings.ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS,
                     PluginSettings.ACTIVE_RESPONSE_BULK_MAX_ACTIONS,
                     PluginSettings.LEGACY_ALERTING_FILTER_BY_BACKEND_ROLES,
@@ -212,6 +232,10 @@ internal class PluginSettingsTests {
                 setOf(
                     PluginSettings.OPERATION_TIMEOUT_MS,
                     PluginSettings.DEFAULT_ITEMS_QUERY_COUNT,
+                    PluginSettings.MAX_NOTIFICATION_CONFIGS,
+                    PluginSettings.MAX_NOTIFICATION_GROUPS,
+                    PluginSettings.MAX_NOTIFICATION_SENDERS,
+                    PluginSettings.MAX_ACTIVE_RESPONSES,
                     PluginSettings.ACTIVE_RESPONSE_BULK_FLUSH_INTERVAL_MS,
                     PluginSettings.ACTIVE_RESPONSE_BULK_MAX_ACTIONS,
                     PluginSettings.LEGACY_ALERTING_FILTER_BY_BACKEND_ROLES,
