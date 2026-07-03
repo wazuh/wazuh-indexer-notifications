@@ -38,4 +38,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## Prior versions
 - []()
 
-[Unreleased 5.0.x]: https://github.com/wazuh/wazuh-indexer-notifications/compare/1929b1cf1d6b05d830b58916a8d1d6182f2f5ad8...main
+[Unreleased 5.0.x]: https://github.com/wazuh/wazuh-indexer-notifications/compare/1929b1cf1d6b05d830b58916a8d1d6182f2f5ad8...5.0.0
