@@ -32,6 +32,7 @@ import org.opensearch.notifications.action.PublishNotificationAction
 import org.opensearch.notifications.action.SendNotificationAction
 import org.opensearch.notifications.action.SendTestNotificationAction
 import org.opensearch.notifications.action.UpdateNotificationConfigAction
+import org.opensearch.notifications.index.ConfigCreationLockService
 import org.opensearch.notifications.index.ConfigIndexingActions
 import org.opensearch.notifications.index.DefaultChannelInitializer
 import org.opensearch.notifications.index.NotificationConfigIndex
@@ -104,6 +105,10 @@ class NotificationPlugin : ActionPlugin, ClusterPlugin, Plugin(), NotificationCo
             SystemIndexDescriptor(
                 NotificationConfigIndex.INDEX_NAME,
                 "System index for storing notification channels related configurations."
+            ),
+            SystemIndexDescriptor(
+                ConfigCreationLockService.INDEX_NAME,
+                "System index for serializing the notification-config-creation limit check."
             )
         )
     }
@@ -141,6 +146,7 @@ class NotificationPlugin : ActionPlugin, ClusterPlugin, Plugin(), NotificationCo
         )
         PluginSettings.addSettingsUpdateConsumer(clusterService)
         NotificationConfigIndex.initialize(sdkClient, client, clusterService)
+        ConfigCreationLockService.initialize(client, clusterService)
         ConfigIndexingActions.initialize(NotificationConfigIndex, UserAccessManager)
         activeResponseBulkIndexer = ActiveResponseBulkIndexer(
             client,
