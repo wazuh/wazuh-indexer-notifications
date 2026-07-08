@@ -17,6 +17,7 @@ import org.opensearch.action.get.MultiGetRequest
 import org.opensearch.action.get.MultiGetResponse
 import org.opensearch.action.index.IndexResponse
 import org.opensearch.action.search.SearchResponse
+import org.opensearch.action.support.WriteRequest
 import org.opensearch.action.support.clustermanager.AcknowledgedResponse
 import org.opensearch.cluster.service.ClusterService
 import org.opensearch.common.unit.TimeValue
@@ -240,6 +241,10 @@ internal object NotificationConfigIndex : ConfigOperations {
             .index(INDEX_NAME)
             .dataObject({ builder, params -> configDoc.toXContent(builder, params) })
             .overwriteIfExists(false)
+            // The limit-check count queries run while ConfigCreationLockService's mutex is held; an
+            // immediate refresh here guarantees the next lock holder's count sees this document,
+            // closing the window that made the check-then-act race possible.
+            .refreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
         if (id != null) {
             postRequest.id(id)
         }
