@@ -11,14 +11,8 @@
 - Active Response events completeness [(#105)](https://github.com/wazuh/wazuh-indexer-notifications/pull/105)
 - Add limit for the number of notification channels, notification groups, notification senders, and active responses [(#118)](https://github.com/wazuh/wazuh-indexer-notifications/pull/118)
 
-### Dependencies
--
-
 ### Changed
 - Bump actions to NodeJS 24 [(#14)](https://github.com/wazuh/wazuh-indexer-notifications/pull/14)
-
-### Deprecated
--
 
 ### Removed
 -
@@ -27,9 +21,6 @@
 - Fixed CodeQL compilation ([#15](https://github.com/wazuh/wazuh-indexer-notifications/pull/15))
 - Fixed CodeQL common-utils dependency ([#35](https://github.com/wazuh/wazuh-indexer-notifications/pull/35))
 - Fix SLF4J startup warning by replacing 1.x bridge with correct 2.x provider [(#110)](https://github.com/wazuh/wazuh-indexer-notifications/pull/110)
-
-### Security
--
 
 ## Prior versions
 - []()
