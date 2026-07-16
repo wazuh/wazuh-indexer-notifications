@@ -1,9 +1,5 @@
-# CHANGELOG
-All notable changes to this project are documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). See the [CONTRIBUTING guide](./CONTRIBUTING.md#changelog) for instructions on how to add changelog entries.
-
 ## [v5.0.0]
+
 ### Added
 - Initialize repository. [(#2)](https://github.com/wazuh/wazuh-indexer-notifications/issues/2)
 - Implement wazuh-indexer-common-utils usage [(#17)](https://github.com/wazuh/wazuh-indexer-notifications/pull/17)
@@ -15,14 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Active Response events completeness [(#105)](https://github.com/wazuh/wazuh-indexer-notifications/pull/105)
 - Add limit for the number of notification channels, notification groups, notification senders, and active responses [(#118)](https://github.com/wazuh/wazuh-indexer-notifications/pull/118)
 
-### Dependencies
--
-
 ### Changed
 - Bump actions to NodeJS 24 [(#14)](https://github.com/wazuh/wazuh-indexer-notifications/pull/14)
-
-### Deprecated
--
 
 ### Removed
 -
@@ -32,10 +22,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Fixed CodeQL common-utils dependency ([#35](https://github.com/wazuh/wazuh-indexer-notifications/pull/35))
 - Fix SLF4J startup warning by replacing 1.x bridge with correct 2.x provider [(#110)](https://github.com/wazuh/wazuh-indexer-notifications/pull/110)
 
-### Security
--
-
 ## Prior versions
 - []()
-
-[Unreleased 5.0.x]: https://github.com/wazuh/wazuh-indexer-notifications/compare/1929b1cf1d6b05d830b58916a8d1d6182f2f5ad8...5.0.0
