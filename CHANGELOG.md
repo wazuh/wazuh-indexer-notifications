@@ -2,25 +2,25 @@
 
 ### Added
 - Initialize repository. [(#2)](https://github.com/wazuh/wazuh-indexer-notifications/issues/2)
-- Implement wazuh-indexer-common-utils usage [(#17)](https://github.com/wazuh/wazuh-indexer-notifications/pull/17)
-- Add active response channel [(#7)](https://github.com/wazuh/wazuh-indexer-notifications/pull/7)
-- Add `--set-as-main` flag support to repository bumper [(#23)](https://github.com/wazuh/wazuh-indexer-notifications/pull/23)
-- Implement batch Active Response indexing using BulkProcessor [(#67)](https://github.com/wazuh/wazuh-indexer-notifications/pull/67)
-- Add revert bump functionality to repository bumper workflow [(#58)](https://github.com/wazuh/wazuh-indexer-notifications/pull/58)
-- Create default notification channels on startup [(#68)](https://github.com/wazuh/wazuh-indexer-notifications/pull/68)
-- Active Response events completeness [(#105)](https://github.com/wazuh/wazuh-indexer-notifications/pull/105)
-- Add limit for the number of notification channels, notification groups, notification senders, and active responses [(#118)](https://github.com/wazuh/wazuh-indexer-notifications/pull/118)
+- Implement wazuh-indexer-common-utils usage [(#1)](https://github.com/wazuh/wazuh-indexer-common-utils/issues/1)
+- Add active response channel [(#6)](https://github.com/wazuh/wazuh-indexer-notifications/issues/6)
+- Add `--set-as-main` flag support to repository bumper [(#22)](https://github.com/wazuh/wazuh-indexer-notifications/issues/22)
+- Implement batch Active Response indexing using BulkProcessor [(#41)](https://github.com/wazuh/wazuh-indexer-notifications/issues/41)
+- Add revert bump functionality to repository bumper workflow [(#54)](https://github.com/wazuh/wazuh-indexer-notifications/issues/54)
+- Create default notification channels on startup [(#45)](https://github.com/wazuh/wazuh-indexer-notifications/issues/45)
+- Active Response events completeness [(#101)](https://github.com/wazuh/wazuh-indexer-notifications/issues/101)
+- Add limit for the number of notification channels, notification groups, notification senders, and active responses [(#1276)](https://github.com/wazuh/wazuh-indexer-plugins/issues/1276)
 
 ### Changed
-- Bump actions to NodeJS 24 [(#14)](https://github.com/wazuh/wazuh-indexer-notifications/pull/14)
+- Bump actions to NodeJS 24 [(#1368)](https://github.com/wazuh/wazuh-indexer/issues/1368)
 
 ### Removed
 -
 
 ### Fixed
-- Fixed CodeQL compilation ([#15](https://github.com/wazuh/wazuh-indexer-notifications/pull/15))
-- Fixed CodeQL common-utils dependency ([#35](https://github.com/wazuh/wazuh-indexer-notifications/pull/35))
-- Fix SLF4J startup warning by replacing 1.x bridge with correct 2.x provider [(#110)](https://github.com/wazuh/wazuh-indexer-notifications/pull/110)
+- Fixed CodeQL compilation ([#8](https://github.com/wazuh/wazuh-indexer-notifications/issues/8))
+- Fixed CodeQL common-utils dependency ([#34](https://github.com/wazuh/wazuh-indexer-notifications/issues/34))
+- Fix SLF4J startup warning by replacing 1.x bridge with correct 2.x provider [(#1577)](https://github.com/wazuh/wazuh-indexer/issues/1577)
 
 ## Prior versions
 - []()
