@@ -17,6 +17,7 @@ import org.opensearch.action.get.MultiGetRequest
 import org.opensearch.action.get.MultiGetResponse
 import org.opensearch.action.index.IndexResponse
 import org.opensearch.action.search.SearchResponse
+import org.opensearch.action.support.WriteRequest
 import org.opensearch.action.support.clustermanager.AcknowledgedResponse
 import org.opensearch.cluster.service.ClusterService
 import org.opensearch.common.unit.TimeValue
@@ -24,6 +25,8 @@ import org.opensearch.common.util.concurrent.ThreadContext
 import org.opensearch.common.xcontent.LoggingDeprecationHandler
 import org.opensearch.common.xcontent.XContentHelper
 import org.opensearch.common.xcontent.XContentType
+import org.opensearch.commons.notifications.NotificationConstants.CONFIG_TAG
+import org.opensearch.commons.notifications.NotificationConstants.CONFIG_TYPE_TAG
 import org.opensearch.commons.notifications.action.GetNotificationConfigRequest
 import org.opensearch.commons.notifications.model.NotificationConfigInfo
 import org.opensearch.commons.notifications.model.NotificationConfigSearchResult
@@ -181,6 +184,55 @@ internal object NotificationConfigIndex : ConfigOperations {
     }
 
     /**
+     * Count all notification config documents in the index.
+     * Returns 0 if the index does not exist yet.
+     * @return total number of notification configs
+     */
+    suspend fun countNotificationConfigs(): Long {
+        if (!isIndexExists()) {
+            return 0L
+        }
+        val sourceBuilder = SearchSourceBuilder()
+            .timeout(TimeValue(PluginSettings.operationTimeoutMs, TimeUnit.MILLISECONDS))
+            .size(0)
+            .trackTotalHits(true)
+        val searchRequest = SearchDataObjectRequest.builder()
+            .indices(INDEX_NAME)
+            .searchSourceBuilder(sourceBuilder)
+            .build()
+        val response: SearchResponse = sdkClient.suspendUntilTimeout(PluginSettings.operationTimeoutMs) {
+            sdkClient.searchDataObjectAsync(searchRequest).whenComplete(it)
+        }
+        return response.hits.totalHits?.value ?: 0L
+    }
+
+    /**
+     * Count notification config documents of specific types.
+     * Returns 0 if the index does not exist yet.
+     * @param configTypes one or more config type tags to filter by (e.g. "email_group", "smtp_account")
+     * @return total number of matching notification configs
+     */
+    suspend fun countNotificationConfigsByType(vararg configTypes: String): Long {
+        if (!isIndexExists()) {
+            return 0L
+        }
+        val query = QueryBuilders.termsQuery("$CONFIG_TAG.$CONFIG_TYPE_TAG", configTypes.toList())
+        val sourceBuilder = SearchSourceBuilder()
+            .timeout(TimeValue(PluginSettings.operationTimeoutMs, TimeUnit.MILLISECONDS))
+            .size(0)
+            .trackTotalHits(true)
+            .query(query)
+        val searchRequest = SearchDataObjectRequest.builder()
+            .indices(INDEX_NAME)
+            .searchSourceBuilder(sourceBuilder)
+            .build()
+        val response: SearchResponse = sdkClient.suspendUntilTimeout(PluginSettings.operationTimeoutMs) {
+            sdkClient.searchDataObjectAsync(searchRequest).whenComplete(it)
+        }
+        return response.hits.totalHits?.value ?: 0L
+    }
+
+    /**
      * {@inheritDoc}
      */
     override suspend fun createNotificationConfig(configDoc: NotificationConfigDoc, id: String?): String? {
@@ -189,6 +241,10 @@ internal object NotificationConfigIndex : ConfigOperations {
             .index(INDEX_NAME)
             .dataObject({ builder, params -> configDoc.toXContent(builder, params) })
             .overwriteIfExists(false)
+            // The limit-check count queries run while ConfigCreationLockService's mutex is held; an
+            // immediate refresh here guarantees the next lock holder's count sees this document,
+            // closing the window that made the check-then-act race possible.
+            .refreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
         if (id != null) {
             postRequest.id(id)
         }
