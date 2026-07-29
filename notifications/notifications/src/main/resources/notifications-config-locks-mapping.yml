@@ -1,0 +1,16 @@
+---
+##
+ # Copyright (C) 2026, Wazuh Inc.
+ #
+ # This program is free software: you can redistribute it and/or modify
+ # it under the terms of the GNU Affero General Public License as
+ # published by the Free Software Foundation, either version 3 of the
+ # License, or (at your option) any later version.
+##
+
+# Schema file for the notifications-config-locks index
+# "dynamic" is set to "strict" so this index only ever holds the fields the lock service uses.
+dynamic: strict
+properties:
+  acquired_at:
+    type: long

@@ -69,20 +69,20 @@ class DeleteNotificationConfigIT : PluginRestTestCase() {
     }
 
     fun `test Delete multiple notification config`() {
-        val configIds: Set<String> = (1..20).map { createConfig() }.toSet()
+        val configIds: Set<String> = (1..5).map { createConfig() }.toSet()
         Thread.sleep(1000)
 
-        // Get all notification configs
+        // Get created notification configs by ID list (avoids counting default channels)
         val getAllConfigResponse = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs",
+            "$PLUGIN_BASE_URI/configs?config_id_list=${configIds.joinToString(",")}",
             "",
             RestStatus.OK.status
         )
-        verifyMultiConfigIdEquals(configIds, getAllConfigResponse)
+        verifyMultiConfigIdEquals(configIds, getAllConfigResponse, configIds.size)
         Thread.sleep(100)
 
-        // Delete notification config
+        // Delete notification configs
         val deleteResponse = deleteConfigs(configIds)
         val deletedObject = deleteResponse.get("delete_response_list").asJsonObject
         configIds.forEach {
@@ -90,36 +90,37 @@ class DeleteNotificationConfigIT : PluginRestTestCase() {
         }
         Thread.sleep(1000)
 
-        // Get notification configs after delete
-        val getAfterDelete = executeRequest(
-            RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs",
-            "",
-            RestStatus.OK.status
-        )
-        Assert.assertEquals(0, getAfterDelete.get("total_hits").asInt)
+        // Verify each deleted config is gone
+        configIds.forEach { configId ->
+            executeRequest(
+                RestRequest.Method.GET.name,
+                "$PLUGIN_BASE_URI/configs/$configId",
+                "",
+                RestStatus.NOT_FOUND.status
+            )
+        }
         Thread.sleep(100)
     }
 
     fun `test Delete some items from multiple notification config with missing configs should fail`() {
-        val configIds: Set<String> = (1..19).map { createConfig() }.toSet()
+        val configIds: Set<String> = (1..5).map { createConfig() }.toSet()
         Thread.sleep(1000)
 
-        // Get all notification configs
+        // Get created notification configs by ID list (avoids counting default channels)
         val getAllConfigResponse = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs",
+            "$PLUGIN_BASE_URI/configs?config_id_list=${configIds.joinToString(",")}",
             "",
             RestStatus.OK.status
         )
-        verifyMultiConfigIdEquals(configIds, getAllConfigResponse)
+        verifyMultiConfigIdEquals(configIds, getAllConfigResponse, configIds.size)
         Thread.sleep(100)
 
         var index = 0
         val partitions = configIds.partition { (index++) % 2 == 0 }
         val deletedIds = partitions.first.toSet()
 
-        // Delete notification config
+        // Delete notification config (with a non-existent ID appended — should fail)
         executeRequest(
             RestRequest.Method.DELETE.name,
             "$PLUGIN_BASE_URI/configs?config_id_list=${deletedIds.joinToString(separator = ",")},extra_id",
@@ -128,29 +129,29 @@ class DeleteNotificationConfigIT : PluginRestTestCase() {
         )
         Thread.sleep(1000)
 
-        // Get notification configs after failed delete
+        // Verify all original configs are still present after the failed delete
         val getAfterDelete = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs",
+            "$PLUGIN_BASE_URI/configs?config_id_list=${configIds.joinToString(",")}",
             "",
             RestStatus.OK.status
         )
-        verifyMultiConfigIdEquals(configIds, getAfterDelete)
+        verifyMultiConfigIdEquals(configIds, getAfterDelete, configIds.size)
         Thread.sleep(100)
     }
 
     fun `test Delete partial items from multiple notification config`() {
-        val configIds: Set<String> = (1..19).map { createConfig() }.toSet()
+        val configIds: Set<String> = (1..5).map { createConfig() }.toSet()
         Thread.sleep(1000)
 
-        // Get all notification configs
+        // Get created notification configs by ID list (avoids counting default channels)
         val getAllConfigResponse = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs",
+            "$PLUGIN_BASE_URI/configs?config_id_list=${configIds.joinToString(",")}",
             "",
             RestStatus.OK.status
         )
-        verifyMultiConfigIdEquals(configIds, getAllConfigResponse)
+        verifyMultiConfigIdEquals(configIds, getAllConfigResponse, configIds.size)
         Thread.sleep(100)
 
         var index = 0
@@ -158,7 +159,7 @@ class DeleteNotificationConfigIT : PluginRestTestCase() {
         val deletedIds = partitions.first.toSet()
         val remainingIds = partitions.second.toSet()
 
-        // Delete notification config
+        // Delete notification configs
         val deleteResponse = deleteConfigs(deletedIds)
         val deletedObject = deleteResponse.get("delete_response_list").asJsonObject
         deletedIds.forEach {
@@ -166,14 +167,14 @@ class DeleteNotificationConfigIT : PluginRestTestCase() {
         }
         Thread.sleep(1000)
 
-        // Get notification configs after delete
+        // Get remaining notification configs by ID list
         val getAfterDelete = executeRequest(
             RestRequest.Method.GET.name,
-            "$PLUGIN_BASE_URI/configs",
+            "$PLUGIN_BASE_URI/configs?config_id_list=${remainingIds.joinToString(",")}",
             "",
             RestStatus.OK.status
         )
-        verifyMultiConfigIdEquals(remainingIds, getAfterDelete)
+        verifyMultiConfigIdEquals(remainingIds, getAfterDelete, remainingIds.size)
         Thread.sleep(100)
     }
 }

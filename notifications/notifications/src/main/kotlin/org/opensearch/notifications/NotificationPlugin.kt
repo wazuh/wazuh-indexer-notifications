@@ -6,6 +6,7 @@
 package org.opensearch.notifications
 
 import org.opensearch.action.ActionRequest
+import org.opensearch.cluster.LocalNodeClusterManagerListener
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver
 import org.opensearch.cluster.node.DiscoveryNode
 import org.opensearch.cluster.node.DiscoveryNodes
@@ -32,6 +33,7 @@ import org.opensearch.notifications.action.PublishNotificationAction
 import org.opensearch.notifications.action.SendNotificationAction
 import org.opensearch.notifications.action.SendTestNotificationAction
 import org.opensearch.notifications.action.UpdateNotificationConfigAction
+import org.opensearch.notifications.index.ConfigCreationLockService
 import org.opensearch.notifications.index.ConfigIndexingActions
 import org.opensearch.notifications.index.DefaultChannelInitializer
 import org.opensearch.notifications.index.NotificationConfigIndex
@@ -68,6 +70,7 @@ import org.opensearch.script.ScriptService
 import org.opensearch.threadpool.ThreadPool
 import org.opensearch.transport.client.Client
 import org.opensearch.watcher.ResourceWatcherService
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Supplier
 
 /**
@@ -104,6 +107,10 @@ class NotificationPlugin : ActionPlugin, ClusterPlugin, Plugin(), NotificationCo
             SystemIndexDescriptor(
                 NotificationConfigIndex.INDEX_NAME,
                 "System index for storing notification channels related configurations."
+            ),
+            SystemIndexDescriptor(
+                ConfigCreationLockService.INDEX_NAME,
+                "System index for serializing the notification-config-creation limit check."
             )
         )
     }
@@ -141,6 +148,7 @@ class NotificationPlugin : ActionPlugin, ClusterPlugin, Plugin(), NotificationCo
         )
         PluginSettings.addSettingsUpdateConsumer(clusterService)
         NotificationConfigIndex.initialize(sdkClient, client, clusterService)
+        ConfigCreationLockService.initialize(client, clusterService)
         ConfigIndexingActions.initialize(NotificationConfigIndex, UserAccessManager)
         activeResponseBulkIndexer = ActiveResponseBulkIndexer(
             client,
@@ -231,9 +239,30 @@ class NotificationPlugin : ActionPlugin, ClusterPlugin, Plugin(), NotificationCo
      * {@inheritDoc}
      */
     override fun onNodeStarted(localNode: DiscoveryNode) {
-        if (localNode.isClusterManagerNode) {
-            log.info("$LOG_PREFIX:Initializing default notification channels on cluster manager node")
-            DefaultChannelInitializer.initialize()
+        // isClusterManagerNode is a role check (cluster-manager-eligible) that is true on every
+        // eligible node, not just the elected one, and at onNodeStarted time an election may not
+        // have finished yet. A LocalNodeClusterManagerListener instead fires once this specific
+        // node actually becomes the elected leader, so initialization only ever runs on a single
+        // node per cluster, avoiding the race where multiple nodes try to create the same default
+        // channel documents.
+        val initialized = AtomicBoolean(false)
+        val listener = object : LocalNodeClusterManagerListener {
+            override fun onClusterManager() {
+                if (!initialized.compareAndSet(false, true)) {
+                    return
+                }
+                log.info("$LOG_PREFIX:Initializing default notification channels on elected cluster manager node")
+                DefaultChannelInitializer.initialize()
+            }
+
+            override fun offClusterManager() {}
+        }
+        clusterService.addLocalNodeClusterManagerListener(listener)
+
+        // The listener only fires on transitions. If the election already happened before this
+        // method runs, trigger the callback explicitly.
+        if (clusterService.state().nodes().isLocalNodeElectedClusterManager) {
+            listener.onClusterManager()
         }
     }
 }
