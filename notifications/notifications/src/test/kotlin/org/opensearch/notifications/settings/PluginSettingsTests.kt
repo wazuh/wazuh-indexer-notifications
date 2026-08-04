@@ -11,6 +11,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito.mock
 import org.opensearch.cluster.service.ClusterService
 import org.opensearch.common.settings.ClusterSettings
@@ -29,6 +30,10 @@ internal class PluginSettingsTests {
     private val alertingFilterByBackendRolesKey = "plugins.alerting.filter_by_backend_roles"
     private val filterByBackendRolesKey = "$generalKeyPrefix.filter_by_backend_roles"
     private val multiTenancyEnabledKey = "plugins.notifications.multi_tenancy_enabled"
+    private val maxNotificationConfigsKey = "plugins.notifications.max_notification_configs"
+    private val maxNotificationGroupsKey = "plugins.notifications.max_notification_groups"
+    private val maxNotificationSendersKey = "plugins.notifications.max_notification_senders"
+    private val maxActiveResponsesKey = "plugins.notifications.max_active_responses"
 
     private val defaultSettings = Settings.builder()
         .put(operationTimeoutKey, 60000L)
@@ -265,6 +270,83 @@ internal class PluginSettingsTests {
             .put(multiTenancyEnabledKey, true)
             .build()
         Assertions.assertEquals(true, PluginSettings.MULTI_TENANCY_ENABLED.get(settings))
+    }
+
+    @Test
+    fun `test resource limit settings fall back to their defaults`() {
+        Assertions.assertEquals(40, PluginSettings.MAX_NOTIFICATION_CONFIGS.get(Settings.EMPTY))
+        Assertions.assertEquals(10, PluginSettings.MAX_NOTIFICATION_GROUPS.get(Settings.EMPTY))
+        Assertions.assertEquals(5, PluginSettings.MAX_NOTIFICATION_SENDERS.get(Settings.EMPTY))
+        Assertions.assertEquals(10, PluginSettings.MAX_ACTIVE_RESPONSES.get(Settings.EMPTY))
+    }
+
+    @Test
+    fun `test resource limit settings have no upper bound`() {
+        val settings = Settings.builder()
+            .put(maxNotificationConfigsKey, 100000)
+            .put(maxNotificationGroupsKey, 100000)
+            .put(maxNotificationSendersKey, 100000)
+            .put(maxActiveResponsesKey, 100000)
+            .build()
+
+        Assertions.assertEquals(100000, PluginSettings.MAX_NOTIFICATION_CONFIGS.get(settings))
+        Assertions.assertEquals(100000, PluginSettings.MAX_NOTIFICATION_GROUPS.get(settings))
+        Assertions.assertEquals(100000, PluginSettings.MAX_NOTIFICATION_SENDERS.get(settings))
+        Assertions.assertEquals(100000, PluginSettings.MAX_ACTIVE_RESPONSES.get(settings))
+    }
+
+    @Test
+    fun `test resource limit settings accept Integer MAX_VALUE`() {
+        val settings = Settings.builder()
+            .put(maxNotificationConfigsKey, Int.MAX_VALUE)
+            .put(maxNotificationGroupsKey, Int.MAX_VALUE)
+            .put(maxNotificationSendersKey, Int.MAX_VALUE)
+            .put(maxActiveResponsesKey, Int.MAX_VALUE)
+            .build()
+
+        Assertions.assertEquals(Int.MAX_VALUE, PluginSettings.MAX_NOTIFICATION_CONFIGS.get(settings))
+        Assertions.assertEquals(Int.MAX_VALUE, PluginSettings.MAX_NOTIFICATION_GROUPS.get(settings))
+        Assertions.assertEquals(Int.MAX_VALUE, PluginSettings.MAX_NOTIFICATION_SENDERS.get(settings))
+        Assertions.assertEquals(Int.MAX_VALUE, PluginSettings.MAX_ACTIVE_RESPONSES.get(settings))
+    }
+
+    @Test
+    fun `test resource limit settings accept zero`() {
+        val settings = Settings.builder()
+            .put(maxNotificationConfigsKey, 0)
+            .put(maxNotificationGroupsKey, 0)
+            .put(maxNotificationSendersKey, 0)
+            .put(maxActiveResponsesKey, 0)
+            .build()
+
+        Assertions.assertEquals(0, PluginSettings.MAX_NOTIFICATION_CONFIGS.get(settings))
+        Assertions.assertEquals(0, PluginSettings.MAX_NOTIFICATION_GROUPS.get(settings))
+        Assertions.assertEquals(0, PluginSettings.MAX_NOTIFICATION_SENDERS.get(settings))
+        Assertions.assertEquals(0, PluginSettings.MAX_ACTIVE_RESPONSES.get(settings))
+    }
+
+    @Test
+    fun `test resource limit settings reject negative values`() {
+        assertThrows<IllegalArgumentException> {
+            PluginSettings.MAX_NOTIFICATION_CONFIGS.get(
+                Settings.builder().put(maxNotificationConfigsKey, -1).build()
+            )
+        }
+        assertThrows<IllegalArgumentException> {
+            PluginSettings.MAX_NOTIFICATION_GROUPS.get(
+                Settings.builder().put(maxNotificationGroupsKey, -1).build()
+            )
+        }
+        assertThrows<IllegalArgumentException> {
+            PluginSettings.MAX_NOTIFICATION_SENDERS.get(
+                Settings.builder().put(maxNotificationSendersKey, -1).build()
+            )
+        }
+        assertThrows<IllegalArgumentException> {
+            PluginSettings.MAX_ACTIVE_RESPONSES.get(
+                Settings.builder().put(maxActiveResponsesKey, -1).build()
+            )
+        }
     }
 
     @Test
