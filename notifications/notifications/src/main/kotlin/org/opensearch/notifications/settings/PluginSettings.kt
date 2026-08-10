@@ -121,14 +121,9 @@ internal object PluginSettings {
     private const val MINIMUM_ITEMS_QUERY_COUNT = 10
 
     /**
-     * Maximum allowed value for the max notification configs setting.
-     */
-    private const val MAXIMUM_MAX_NOTIFICATION_CONFIGS = 40
-
-    /**
      * Default maximum number of notification channel configurations.
      */
-    private const val DEFAULT_MAX_NOTIFICATION_CONFIGS_VALUE = MAXIMUM_MAX_NOTIFICATION_CONFIGS
+    private const val DEFAULT_MAX_NOTIFICATION_CONFIGS_VALUE = 40
 
     /**
      * Minimum allowed value for the max notification configs setting.
@@ -136,14 +131,9 @@ internal object PluginSettings {
     private const val MINIMUM_MAX_NOTIFICATION_CONFIGS = 0
 
     /**
-     * Maximum allowed value for the max notification groups setting.
-     */
-    private const val MAXIMUM_MAX_NOTIFICATION_GROUPS = 10
-
-    /**
      * Default maximum number of notification groups.
      */
-    private const val DEFAULT_MAX_NOTIFICATION_GROUPS_VALUE = MAXIMUM_MAX_NOTIFICATION_GROUPS
+    private const val DEFAULT_MAX_NOTIFICATION_GROUPS_VALUE = 10
 
     /**
      * Minimum allowed value for the max notification groups setting.
@@ -151,14 +141,9 @@ internal object PluginSettings {
     private const val MINIMUM_MAX_NOTIFICATION_GROUPS = 0
 
     /**
-     * Maximum allowed value for the max notification senders setting.
-     */
-    private const val MAXIMUM_MAX_NOTIFICATION_SENDERS = 5
-
-    /**
      * Default maximum number of notification senders.
      */
-    private const val DEFAULT_MAX_NOTIFICATION_SENDERS_VALUE = MAXIMUM_MAX_NOTIFICATION_SENDERS
+    private const val DEFAULT_MAX_NOTIFICATION_SENDERS_VALUE = 5
 
     /**
      * Minimum allowed value for the max notification senders setting.
@@ -166,14 +151,9 @@ internal object PluginSettings {
     private const val MINIMUM_MAX_NOTIFICATION_SENDERS = 0
 
     /**
-     * Maximum allowed value for the max active responses setting.
-     */
-    private const val MAXIMUM_MAX_ACTIVE_RESPONSES = 10
-
-    /**
      * Default maximum number of active response configurations.
      */
-    private const val DEFAULT_MAX_ACTIVE_RESPONSES_VALUE = MAXIMUM_MAX_ACTIVE_RESPONSES
+    private const val DEFAULT_MAX_ACTIVE_RESPONSES_VALUE = 10
 
     /**
      * Minimum allowed value for the max active responses setting.
@@ -313,7 +293,6 @@ internal object PluginSettings {
         MAX_NOTIFICATION_CONFIGS_KEY,
         defaultSettings[MAX_NOTIFICATION_CONFIGS_KEY]!!.toInt(),
         MINIMUM_MAX_NOTIFICATION_CONFIGS,
-        MAXIMUM_MAX_NOTIFICATION_CONFIGS,
         NodeScope,
         Dynamic
     )
@@ -322,7 +301,6 @@ internal object PluginSettings {
         MAX_NOTIFICATION_GROUPS_KEY,
         defaultSettings[MAX_NOTIFICATION_GROUPS_KEY]!!.toInt(),
         MINIMUM_MAX_NOTIFICATION_GROUPS,
-        MAXIMUM_MAX_NOTIFICATION_GROUPS,
         NodeScope,
         Dynamic
     )
@@ -331,7 +309,6 @@ internal object PluginSettings {
         MAX_NOTIFICATION_SENDERS_KEY,
         defaultSettings[MAX_NOTIFICATION_SENDERS_KEY]!!.toInt(),
         MINIMUM_MAX_NOTIFICATION_SENDERS,
-        MAXIMUM_MAX_NOTIFICATION_SENDERS,
         NodeScope,
         Dynamic
     )
@@ -340,7 +317,6 @@ internal object PluginSettings {
         MAX_ACTIVE_RESPONSES_KEY,
         defaultSettings[MAX_ACTIVE_RESPONSES_KEY]!!.toInt(),
         MINIMUM_MAX_ACTIVE_RESPONSES,
-        MAXIMUM_MAX_ACTIVE_RESPONSES,
         NodeScope,
         Dynamic
     )
