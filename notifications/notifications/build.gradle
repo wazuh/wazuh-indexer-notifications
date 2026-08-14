@@ -229,13 +229,13 @@ dependencies {
             'org.assertj:assertj-core:3.19.0',
             'org.mockito:mockito-junit-jupiter:3.10.0',
             'com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0',
-            'io.mockk:mockk:1.11.0',
-            'io.mockk:mockk-common:1.11.0',
-            'io.mockk:mockk-dsl:1.11.0',
-            'io.mockk:mockk-dsl-jvm:1.11.0',
-            'io.mockk:mockk-agent-api:1.11.0',
-            'io.mockk:mockk-agent-common:1.11.0',
-            'io.mockk:mockk-agent-jvm:1.11.0',
+            'io.mockk:mockk:1.14.11',
+            'io.mockk:mockk-common:1.14.11',
+            'io.mockk:mockk-dsl:1.14.11',
+            'io.mockk:mockk-dsl-jvm:1.14.11',
+            'io.mockk:mockk-agent-api:1.14.11',
+            'io.mockk:mockk-agent-common:1.14.11',
+            'io.mockk:mockk-agent-jvm:1.14.11',
             "org.junit.jupiter:junit-jupiter-api:${junit_version}"
     )
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${junit_version}")
