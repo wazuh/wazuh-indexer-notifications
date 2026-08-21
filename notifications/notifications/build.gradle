@@ -161,7 +161,7 @@ configurations.all {
         force "com.amazonaws:aws-java-sdk-dynamodb:${aws_version}"
         force "com.amazonaws:aws-java-sdk-s3:${aws_version}"
         force "com.amazonaws:aws-java-sdk-kms:${aws_version}"
-        force "joda-time:joda-time:2.12.7"
+        force "joda-time:joda-time:2.14.3"
         force "io.netty:netty-codec-http:${versions.netty}"
         force "io.netty:netty-codec-http2:${versions.netty}"
         force "io.netty:netty-codec:${versions.netty}"
