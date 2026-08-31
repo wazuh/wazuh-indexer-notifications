@@ -179,9 +179,34 @@ internal object PluginSettings {
     )
 
     /**
-     * Default host deny list
+     * Default host deny list.
+     *
+     * Ships a secure-by-default SSRF deny list so notification egress (webhook, Slack, Chime,
+     * Microsoft Teams and custom webhook channels, plus the alerting/reporting deliveries that
+     * reuse this core HTTP client) cannot be pointed at loopback, link-local/cloud-metadata or
+     * private-network addresses out of the box. Mirrors the ranges the distribution already ships
+     * for the geospatial IP2Geo datasource downloader
+     * ([plugins.geospatial.ip2geo.datasource.endpoint.denylist]). Operators can still override this
+     * via the dynamic setting [opensearch.notifications.core.http.host_deny_list].
      */
-    private val DEFAULT_HOST_DENY_LIST = emptyList<String>()
+    private val DEFAULT_HOST_DENY_LIST = listOf(
+        "127.0.0.0/8", // IPv4 loopback
+        "169.254.0.0/16", // link-local, includes the cloud instance metadata endpoint 169.254.169.254
+        "10.0.0.0/8", // RFC1918 private
+        "172.16.0.0/12", // RFC1918 private
+        "192.168.0.0/16", // RFC1918 private
+        "0.0.0.0/8", // "this" network / unspecified
+        "100.64.0.0/10", // RFC6598 carrier-grade NAT
+        "192.0.0.0/24", // IETF protocol assignments
+        "192.0.2.0/24", // TEST-NET-1 documentation
+        "198.18.0.0/15", // benchmarking
+        "198.51.100.0/24", // TEST-NET-2 documentation
+        "203.0.113.0/24", // TEST-NET-3 documentation
+        "240.0.0.0/4", // reserved
+        "::1/128", // IPv6 loopback
+        "fe80::/10", // IPv6 link-local
+        "fc00::/7" // IPv6 unique-local
+    )
 
     /**
      * Default disable tooltip support
