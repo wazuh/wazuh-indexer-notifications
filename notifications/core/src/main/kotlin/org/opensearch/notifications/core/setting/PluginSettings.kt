@@ -184,10 +184,11 @@ internal object PluginSettings {
      * Ships a secure-by-default SSRF deny list so notification egress (webhook, Slack, Chime,
      * Microsoft Teams and custom webhook channels, plus the alerting/reporting deliveries that
      * reuse this core HTTP client) cannot be pointed at loopback, link-local/cloud-metadata or
-     * private-network addresses out of the box. Mirrors the ranges the distribution already ships
-     * for the geospatial IP2Geo datasource downloader
-     * ([plugins.geospatial.ip2geo.datasource.endpoint.denylist]). Operators can still override this
-     * via the dynamic setting [opensearch.notifications.core.http.host_deny_list].
+     * private-network addresses out of the box. This is the exact list the distribution already
+     * ships for the geospatial IP2Geo datasource downloader
+     * ([plugins.geospatial.ip2geo.datasource.endpoint.denylist]), kept identical so the indexer
+     * enforces one consistent SSRF egress policy. Operators can still override this via the dynamic
+     * setting [opensearch.notifications.core.http.host_deny_list].
      */
     private val DEFAULT_HOST_DENY_LIST = listOf(
         "127.0.0.0/8", // IPv4 loopback
@@ -200,12 +201,18 @@ internal object PluginSettings {
         "192.0.0.0/24", // IETF protocol assignments
         "192.0.2.0/24", // TEST-NET-1 documentation
         "198.18.0.0/15", // benchmarking
+        "192.88.99.0/24", // 6to4 relay anycast (deprecated)
         "198.51.100.0/24", // TEST-NET-2 documentation
         "203.0.113.0/24", // TEST-NET-3 documentation
-        "240.0.0.0/4", // reserved
+        "224.0.0.0/4", // IPv4 multicast
+        "240.0.0.0/4", // reserved (future use)
+        "255.255.255.255/32", // limited broadcast
         "::1/128", // IPv6 loopback
         "fe80::/10", // IPv6 link-local
-        "fc00::/7" // IPv6 unique-local
+        "fc00::/7", // IPv6 unique-local
+        "::/128", // IPv6 unspecified
+        "2001:db8::/32", // IPv6 documentation
+        "ff00::/8" // IPv6 multicast
     )
 
     /**

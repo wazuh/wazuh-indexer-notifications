@@ -42,6 +42,7 @@ internal class PluginSettingsTests {
     private val clusterNameKey = "cluster.name"
 
     // Secure-by-default SSRF deny list shipped by PluginSettings.DEFAULT_HOST_DENY_LIST
+    // (identical to the geospatial plugins.geospatial.ip2geo.datasource.endpoint.denylist default).
     private val defaultHostDenyList = listOf(
         "127.0.0.0/8",
         "169.254.0.0/16",
@@ -53,12 +54,18 @@ internal class PluginSettingsTests {
         "192.0.0.0/24",
         "192.0.2.0/24",
         "198.18.0.0/15",
+        "192.88.99.0/24",
         "198.51.100.0/24",
         "203.0.113.0/24",
+        "224.0.0.0/4",
         "240.0.0.0/4",
+        "255.255.255.255/32",
         "::1/128",
         "fe80::/10",
-        "fc00::/7"
+        "fc00::/7",
+        "::/128",
+        "2001:db8::/32",
+        "ff00::/8"
     )
 
     private val defaultClusterName = ClusterName.DEFAULT
