@@ -13,6 +13,9 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
+import org.opensearch.notifications.core.setting.PluginSettings
 import java.net.InetAddress
 
 internal class ValidationHelpersTests {
@@ -550,5 +553,34 @@ internal class ValidationHelpersTests {
             org.opensearch.notifications.spi.utils.isHostInDenylist("https://$hostname", hostDenyList),
             "IPv6-mapped 0.0.0.0 should be blocked"
         )
+    }
+
+    // End-to-end coverage of the shipped default deny list (PluginSettings.DEFAULT_HOST_DENY_LIST),
+    // exercised through validateUrlHost() — the exact entry point DestinationHttpClient.execute()
+    // uses before every webhook/Slack/Chime/Teams delivery.
+    @Test
+    fun `test shipped default denylist blocks SSRF targets through validateUrlHost`() {
+        val defaultDenyList = PluginSettings.hostDenyList
+        val blockedUrls = listOf(
+            "http://169.254.169.254/latest/meta-data/iam/security-credentials/", // cloud metadata
+            "http://127.0.0.1:55000/", // loopback-only service (e.g. Wazuh manager API)
+            "http://10.0.0.5/hook", // RFC1918 private
+            "https://172.16.5.4/hook", // RFC1918 private
+            "https://192.168.1.10/hook" // RFC1918 private
+        )
+        for (url in blockedUrls) {
+            assertThrows<IllegalArgumentException>(
+                "$url must be denied by the shipped default host_deny_list"
+            ) {
+                validateUrlHost(url, defaultDenyList)
+            }
+        }
+    }
+
+    @Test
+    fun `test shipped default denylist allows public host through validateUrlHost`() {
+        assertDoesNotThrow("A public address must not be blocked by the default host_deny_list") {
+            validateUrlHost("https://8.8.8.8/hook", PluginSettings.hostDenyList)
+        }
     }
 }
