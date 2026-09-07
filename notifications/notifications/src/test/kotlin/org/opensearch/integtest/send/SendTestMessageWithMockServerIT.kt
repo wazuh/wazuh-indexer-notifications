@@ -23,6 +23,18 @@ internal class SendTestMessageWithMockServerIT : PluginRestTestCase() {
     fun `test webhook return with empty entity`() {
         val url = "http://${server.address.hostString}:${server.address.port}/webhook"
         logger.info("webhook url = {}", url)
+
+        // This test delivers to a loopback mock server, which the secure-by-default
+        // host_deny_list now blocks (127.0.0.0/8); clear it for the duration of the test
+        // (cluster settings are wiped in @After).
+        executeRequest(
+            RestRequest.Method.PUT.name,
+            "/_cluster/settings",
+            """{"transient":{"opensearch.notifications.core.http.host_deny_list":[]}}""",
+            RestStatus.OK.status
+        )
+        Thread.sleep(1000)
+
         // Create webhook notification config
         val createRequestJsonString = """
         {

@@ -17,11 +17,15 @@ import java.net.InetSocketAddress
 
 internal class MaxHTTPResponseSizeIT : PluginRestTestCase() {
     fun `test HTTP response has truncated size`() {
-        // update max http response size setting
+        // update max http response size setting.
+        // This test delivers to a loopback mock server, which the secure-by-default
+        // host_deny_list now blocks (127.0.0.0/8); clear it for the duration of the test
+        // (cluster settings are wiped in @After).
         val updateSettingJsonString = """
         {
             "transient": {
-                "opensearch.notifications.core.max_http_response_size": "8"
+                "opensearch.notifications.core.max_http_response_size": "8",
+                "opensearch.notifications.core.http.host_deny_list": []
             }
         }
         """.trimIndent()
