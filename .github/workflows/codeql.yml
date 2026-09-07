@@ -98,7 +98,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ["java"]
+        # notifications is Kotlin-heavy; java-kotlin (traced via the Gradle build
+        # below) analyzes both Java and Kotlin. Plain "java" would cover Java only.
+        language: ["java-kotlin"]
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby', 'swift' ]
         # Use only 'java' to analyze code written in Java, Kotlin or both
         # Use only 'javascript' to analyze code written in JavaScript, TypeScript or both
@@ -135,9 +137,13 @@ jobs:
           # queries: security-extended,security-and-quality
 
       - name: Build with Gradle
+        # `assemble` compiles all Java + Kotlin (traced by CodeQL) without running
+        # `check`/`integTest`, whose OpenSearch test cluster refuses to run as root
+        # on the self-hosted runner ("can not run opensearch as root"). `build -x test`
+        # is not enough — it skips only the `test` task, not `integTest`.
         run: |
           cd notifications
-          ./gradlew build -x test "-Dversion=${{ needs.get-version.outputs.version }}" "-Drevision=0"
+          ./gradlew assemble "-Dversion=${{ needs.get-version.outputs.version }}" "-Drevision=0"
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
