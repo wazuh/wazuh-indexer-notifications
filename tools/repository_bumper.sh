@@ -156,6 +156,15 @@ function update_build_gradle_version() {
         return 0
     fi
 
+    # Re-assert the contract locally: the substitution below interpolates $version into a sed
+    # replacement, where '&', '/' and backslashes are metacharacters. main() only ever passes a
+    # value already checked by validate_inputs, but this function must not corrupt build.gradle
+    # if it is reused or that validation is relaxed.
+    if ! [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        log "Error: refusing to sync $file with malformed version '$version'."
+        exit 1
+    fi
+
     sed -i -E "s/(System\.getProperty\(\"version\", \")[0-9]+\.[0-9]+\.[0-9]+(\"\))/\1${version}\2/" "$file"
     log "Synced $file hardcoded version fallback to $version"
 }
