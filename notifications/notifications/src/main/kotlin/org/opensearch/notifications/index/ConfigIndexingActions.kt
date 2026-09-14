@@ -489,8 +489,8 @@ object ConfigIndexingActions {
             val config = it.notificationConfig
             Channel(configId, config.name, config.description, config.configType, config.isEnabled)
         }
-        val ChannelList = ChannelList(searchResult)
-        return GetChannelListResponse(ChannelList)
+        val channelList = ChannelList(searchResult)
+        return GetChannelListResponse(channelList)
     }
 
     private fun getSupportedChannelList(): List<String> {
