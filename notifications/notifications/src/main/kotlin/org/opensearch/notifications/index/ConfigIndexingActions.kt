@@ -436,8 +436,13 @@ object ConfigIndexingActions {
             }
         }
         val configSearchResult = configDocs.map {
+            val configId = it.docInfo.id
+                ?: throw OpenSearchStatusException(
+                    "NotificationConfig document is missing its document id",
+                    RestStatus.INTERNAL_SERVER_ERROR
+                )
             NotificationConfigInfo(
-                it.docInfo.id!!,
+                configId,
                 it.configDoc.metadata.lastUpdateTime,
                 it.configDoc.metadata.createdTime,
                 it.configDoc.config
@@ -484,8 +489,8 @@ object ConfigIndexingActions {
             val config = it.notificationConfig
             Channel(configId, config.name, config.description, config.configType, config.isEnabled)
         }
-        val ChannelList = ChannelList(searchResult)
-        return GetChannelListResponse(ChannelList)
+        val channelList = ChannelList(searchResult)
+        return GetChannelListResponse(channelList)
     }
 
     private fun getSupportedChannelList(): List<String> {
