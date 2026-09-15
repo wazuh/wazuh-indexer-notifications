@@ -16,6 +16,7 @@
 
 ### Fixed
 - SLF4J "no provider" warnings during startup [(#1577)](https://github.com/wazuh/wazuh-indexer/issues/1577)
+- Active response with `location = local` reported as delivered while missing a target agent [(#183)](https://github.com/wazuh/wazuh-indexer-notifications/issues/183)
 
 ## Prior versions
 - []()
