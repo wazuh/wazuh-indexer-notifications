@@ -65,6 +65,12 @@ import java.io.ByteArrayOutputStream
 object SendMessageActionHelper {
     private val log by logger(SendMessageActionHelper::class.java)
 
+    /** Active response location that targets the agent which produced the alert. */
+    private const val LOCATION_LOCAL = "local"
+
+    /** Field of the copied alert the manager reads the target agent from for [LOCATION_LOCAL]. */
+    private const val AGENT_ID_FIELD = "wazuh.agent.id"
+
     private lateinit var configOperations: ConfigOperations
     private lateinit var userAccess: UserAccess
     private lateinit var client: org.opensearch.notifications.util.SecureIndexClient
@@ -308,6 +314,22 @@ object SendMessageActionHelper {
                 ?.toMutableMap()
                 ?: mutableMapOf()
 
+            val missingField = missingActiveResponseTarget(activeResponse.location, wazuhMap)
+            if (missingField != null) {
+                log.warn(
+                    "$LOG_PREFIX:sendActiveResponseMessage Refusing active response for docId=$docId indexName=$indexName: " +
+                        "location '${activeResponse.location}' takes the target agent from '$missingField', " +
+                        "which the document does not carry"
+                )
+                return eventStatus.copy(
+                    deliveryStatus = DeliveryStatus(
+                        RestStatus.BAD_REQUEST.status.toString(),
+                        "Active response not queued: location '${activeResponse.location}' takes the target agent from " +
+                            "'$missingField', which document [$docId] of index [$indexName] does not carry"
+                    )
+                )
+            }
+
             wazuhMap["active_response"] = mapOf(
                 "name" to channelName,
                 "type" to activeResponse.type,
@@ -339,6 +361,28 @@ object SendMessageActionHelper {
                 )
             )
         }
+    }
+
+    /**
+     * Check whether a target agent can be resolved for the configured `location`.
+     *
+     * Each location resolves the target from a different place: `defined-agent` from the channel's own
+     * `agent_id`, `all` from the fleet, and `local` from the document that triggered the response, at
+     * [AGENT_ID_FIELD]. Only the last of these depends on the document, so only it can fail to resolve
+     * — and when it does, the failure is silent: the index accepts the response, nothing ever executes
+     * it, and the caller is told it was delivered. Catching that is only possible here, where the
+     * channel and the document are both in hand and before the response is written.
+     *
+     * @param location the channel's configured location
+     * @param wazuhMap the `wazuh` object copied from the triggering document
+     * @return the name of the field needed to resolve a target, or null if one can be resolved
+     */
+    internal fun missingActiveResponseTarget(location: String, wazuhMap: Map<String, Any?>): String? {
+        if (location != LOCATION_LOCAL) {
+            return null
+        }
+        val agentId = (wazuhMap["agent"] as? Map<*, *>)?.get("id")
+        return if (agentId?.toString().isNullOrBlank()) AGENT_ID_FIELD else null
     }
 
     // Wazuh
