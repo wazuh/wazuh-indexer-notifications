@@ -17,6 +17,7 @@
 ### Fixed
 - SLF4J "no provider" warnings during startup [(#1577)](https://github.com/wazuh/wazuh-indexer/issues/1577)
 - Ship a secure-by-default `host_deny_list` for notification egress, blocking SSRF to loopback, private and cloud-metadata addresses [(#1853)](https://github.com/wazuh/wazuh-indexer/issues/1853)
+- Active response with `location = local` reported as delivered while missing a target agent [(#183)](https://github.com/wazuh/wazuh-indexer-notifications/issues/183)
 
 ## Prior versions
 - []()
