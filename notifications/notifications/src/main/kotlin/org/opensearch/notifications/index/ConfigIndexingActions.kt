@@ -231,7 +231,9 @@ object ConfigIndexingActions {
         // Serialize the limit-check-then-create sequence so concurrent requests cannot all
         // observe a stale count and overshoot the configured max. A single lock covers every
         // config type because maxNotificationConfigs is a global cap spanning all of them.
-        try {
+        // The handle identifies the lock document this request created, so release() can only
+        // delete our own lock and never one a later caller acquired after ours was stolen.
+        val lockHandle = try {
             ConfigCreationLockService.acquire()
         } catch (e: IllegalStateException) {
             log.warn("$LOG_PREFIX:${e.message}")
@@ -318,7 +320,7 @@ object ConfigIndexingActions {
             }
             return CreateNotificationConfigResponse(docId)
         } finally {
-            ConfigCreationLockService.release()
+            ConfigCreationLockService.release(lockHandle)
         }
     }
 
