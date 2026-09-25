@@ -145,7 +145,7 @@ configurations.all {
                 details.useVersion version
             }
         }
-        force "commons-logging:commons-logging:1.3.5"
+        force "commons-logging:commons-logging:1.4.0"
         force "commons-codec:commons-codec:1.17.1"
         force "org.apache.httpcomponents.core5:httpcore5:${versions.httpcore5}"
         force "org.apache.httpcomponents.client5:httpclient5:${versions.httpclient5}"
