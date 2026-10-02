@@ -13,5 +13,5 @@ jobs:
       - uses: actions/checkout@v7
       - uses: dangoslen/changelog-enforcer@v3
         with:
-          skipLabels: "autocut, skip-changelog"
+          skipLabels: "no-changelog"
           changeLogPath: "CHANGELOG.md"
