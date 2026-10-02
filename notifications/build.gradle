@@ -9,7 +9,8 @@ buildscript {
         opensearch_version = System.getProperty("opensearch.version", "3.6.0-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
-        wazuh_version = System.getProperty("version", "5.0.0")
+        wazuh_version = System.getProperty("version") ?: new groovy.json.JsonSlurper()
+            .parse(new File(projectDir, "../VERSION.json")).version
         revision = System.getProperty("revision", "0")
         
         // 3.0.0-SNAPSHOT -> 3.0.0.0-SNAPSHOT

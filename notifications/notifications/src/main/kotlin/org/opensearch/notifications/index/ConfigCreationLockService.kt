@@ -32,6 +32,8 @@ import org.opensearch.common.xcontent.XContentHelper
 import org.opensearch.common.xcontent.XContentType
 import org.opensearch.commons.utils.logger
 import org.opensearch.index.engine.VersionConflictEngineException
+import org.opensearch.index.seqno.SequenceNumbers.UNASSIGNED_PRIMARY_TERM
+import org.opensearch.index.seqno.SequenceNumbers.UNASSIGNED_SEQ_NO
 import org.opensearch.notifications.NotificationPlugin.Companion.LOG_PREFIX
 import org.opensearch.notifications.settings.PluginSettings
 import org.opensearch.notifications.util.SecureIndexClient
@@ -71,6 +73,17 @@ internal object ConfigCreationLockService {
     private lateinit var clusterService: ClusterService
 
     /**
+     * Identifies the exact lock document revision a caller created, so [release] can only delete
+     * its own lock.
+     *
+     * [seqNo] and [primaryTerm] are the document's optimistic-concurrency coordinates. A lock that
+     * [stealIfStale] removed and another caller then re-acquired is a different revision, so the
+     * original holder's conditional delete is rejected instead of silently unlocking the new
+     * owner's critical section.
+     */
+    data class LockHandle(val seqNo: Long, val primaryTerm: Long)
+
+    /**
      * Initializes the service with the client and cluster service used for lock-index operations.
      */
     fun initialize(client: Client, clusterService: ClusterService) {
@@ -82,9 +95,10 @@ internal object ConfigCreationLockService {
      * Acquires the global notification-config-creation mutex, blocking (with bounded retries)
      * until it becomes available.
      *
+     * @return the handle identifying the acquired lock document, which must be passed to [release].
      * @throws IllegalStateException if the lock could not be acquired after [MAX_ACQUIRE_RETRIES] attempts.
      */
-    suspend fun acquire() {
+    suspend fun acquire(): LockHandle {
         ensureIndexExists()
         for (attempt in 1..MAX_ACQUIRE_RETRIES) {
             try {
@@ -97,7 +111,7 @@ internal object ConfigCreationLockService {
                     index(request, it)
                 }
                 log.debug("$LOG_PREFIX:Acquired notification-config-creation lock: $response")
-                return
+                return LockHandle(response.seqNo, response.primaryTerm)
             } catch (e: VersionConflictEngineException) {
                 if (stealIfStale()) {
                     continue
@@ -109,18 +123,34 @@ internal object ConfigCreationLockService {
     }
 
     /**
-     * Releases the lock. Failures are logged and swallowed so a release problem never surfaces as
-     * a config-creation failure; a lock older than [STALE_THRESHOLD_MS] is stolen by the next
-     * caller regardless.
+     * Releases the lock previously taken by [acquire].
+     *
+     * The delete is conditioned on [handle], so it only ever removes the lock document this caller
+     * created. Without that condition a caller whose lock had been stolen by [stealIfStale] --
+     * which happens to a live holder whenever its critical section outlives [STALE_THRESHOLD_MS] --
+     * would delete the lock another caller has since acquired, leaving two callers inside the
+     * critical section and defeating the serialization altogether.
+     *
+     * Failures are logged and swallowed so a release problem never surfaces as a config-creation
+     * failure; a lock older than [STALE_THRESHOLD_MS] is stolen by the next caller regardless.
      */
-    suspend fun release() {
+    suspend fun release(handle: LockHandle) {
         try {
             val request = DeleteRequest(INDEX_NAME, LOCK_ID)
+                .setIfSeqNo(handle.seqNo)
+                .setIfPrimaryTerm(handle.primaryTerm)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
             val response: DeleteResponse = client.suspendUntilTimeout(PluginSettings.operationTimeoutMs) {
                 delete(request, it)
             }
             log.debug("$LOG_PREFIX:Released notification-config-creation lock: $response")
+        } catch (e: VersionConflictEngineException) {
+            // Our lock was stolen, or stolen and re-acquired, while we were still running. The
+            // document now present is not ours to delete, so leave it to its owner.
+            log.warn(
+                "$LOG_PREFIX:Skipped releasing the notification-config-creation lock, it is no longer the one " +
+                    "we acquired: ${e.message}"
+            )
         } catch (e: Exception) {
             log.warn("$LOG_PREFIX:Failed to release notification-config-creation lock: ${e.message}")
         }
@@ -130,7 +160,14 @@ internal object ConfigCreationLockService {
      * Deletes the lock document if it was acquired more than [STALE_THRESHOLD_MS] ago, guarding
      * against a lock orphaned by a crashed node.
      *
-     * @return true if the caller should retry immediately (the lock was stolen, or had already been released).
+     * The delete is conditioned on the revision the staleness decision was made on, so a lock that
+     * was released and re-acquired between the read and the delete is left to its new owner rather
+     * than being stolen from it on the strength of the previous holder's timestamp.
+     *
+     * @return true when the lock is known to be free and the caller should retry at once -- we
+     * stole it, or it had already been released. False to back off first, which includes losing the
+     * race to a caller that acquired the lock while we were deciding to steal it: whoever holds it
+     * now holds it with a fresh timestamp, so retrying immediately could only conflict again.
      */
     private suspend fun stealIfStale(): Boolean {
         return try {
@@ -145,14 +182,28 @@ internal object ConfigCreationLockService {
             if (Instant.now().toEpochMilli() - acquiredAt <= STALE_THRESHOLD_MS) {
                 return false
             }
+            if (response.seqNo == UNASSIGNED_SEQ_NO || response.primaryTerm == UNASSIGNED_PRIMARY_TERM) {
+                // Without the document's revision the delete cannot be made conditional, and an
+                // unconditional one risks dropping a lock that has since changed hands.
+                log.warn("$LOG_PREFIX:Stale notification-config-creation lock carries no revision info, not stealing.")
+                return false
+            }
             log.warn("$LOG_PREFIX:Stealing stale notification-config-creation lock.")
             val deleteRequest = DeleteRequest(INDEX_NAME, LOCK_ID)
+                .setIfSeqNo(response.seqNo)
+                .setIfPrimaryTerm(response.primaryTerm)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
             val deleteResponse: DeleteResponse = client.suspendUntilTimeout(PluginSettings.operationTimeoutMs) {
                 delete(deleteRequest, it)
             }
             log.debug("$LOG_PREFIX:Stole stale notification-config-creation lock: $deleteResponse")
             true
+        } catch (e: VersionConflictEngineException) {
+            // The revision we aimed at is gone: the lock was released and re-acquired between the
+            // staleness read and the delete, so it is not the orphan we decided to steal. Back off
+            // instead of retrying at once, since its new holder's timestamp is fresh.
+            log.debug("$LOG_PREFIX:Stale-lock steal skipped, the lock changed concurrently: ${e.message}")
+            false
         } catch (e: Exception) {
             log.warn("$LOG_PREFIX:Failed to check staleness of notification-config-creation lock: ${e.message}")
             false
