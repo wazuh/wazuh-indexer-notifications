@@ -18,10 +18,13 @@ package org.opensearch.notifications.index
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ThreadContextElement
 import kotlinx.coroutines.launch
+import org.opensearch.OpenSearchStatusException
 import org.opensearch.action.admin.indices.exists.indices.IndicesExistsRequest
 import org.opensearch.action.get.GetRequest
 import org.opensearch.action.index.IndexRequest
+import org.opensearch.common.util.concurrent.ThreadContext
 import org.opensearch.common.xcontent.XContentFactory
 import org.opensearch.commons.notifications.model.ConfigType
 import org.opensearch.commons.notifications.model.HttpMethodType
@@ -29,6 +32,7 @@ import org.opensearch.commons.notifications.model.NotificationConfig
 import org.opensearch.commons.notifications.model.Slack
 import org.opensearch.commons.notifications.model.Webhook
 import org.opensearch.commons.utils.logger
+import org.opensearch.core.rest.RestStatus
 import org.opensearch.core.xcontent.ToXContent
 import org.opensearch.index.engine.VersionConflictEngineException
 import org.opensearch.notifications.NotificationPlugin.Companion.LOG_PREFIX
@@ -37,6 +41,7 @@ import org.opensearch.notifications.model.NotificationConfigDoc
 import org.opensearch.transport.client.Client
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Creates default notification channels on startup if they don't already exist.
@@ -136,13 +141,45 @@ object DefaultChannelInitializer {
      * This method is idempotent and safe to call on every startup.
      */
     fun initialize() {
-        scope.launch {
-            try {
-                initializeDefaultChannels()
-            } catch (e: Exception) {
-                log.error("$LOG_PREFIX:Failed to initialize default notification channels", e)
+        try {
+            scope.launch(StashedThreadContext(client.threadPool().threadContext)) {
+                try {
+                    initializeDefaultChannels()
+                } catch (e: Exception) {
+                    log.error("$LOG_PREFIX:Failed to initialize default notification channels", e)
+                }
             }
+        } catch (e: Exception) {
+            log.error("$LOG_PREFIX:Failed to initialize default notification channels", e)
         }
+    }
+
+    /**
+     * Runs the initialization in an empty [ThreadContext], whatever thread the coroutine resumes on.
+     *
+     * The [Dispatchers.IO] threads are shared with the plugin's transport actions, which can leave
+     * the context of the user that called them behind on a thread (a context stashed on one thread
+     * and restored on another after a suspension). Inherited by this coroutine, that user's
+     * permissions apply to the existence checks: the Dashboard's `kibanaserver` is denied
+     * `indices:admin/exists` on the notifications config index, the check reads as "no index", and
+     * the first-startup path then tries to create channels that already exist.
+     *
+     * The context is stashed each time the coroutine runs on a thread and restored on that same
+     * thread when it suspends, so neither the stale context nor this one leaks across threads.
+     */
+    internal class StashedThreadContext(
+        private val threadContext: ThreadContext
+    ) : ThreadContextElement<ThreadContext.StoredContext> {
+        companion object Key : CoroutineContext.Key<StashedThreadContext>
+
+        override val key: CoroutineContext.Key<StashedThreadContext>
+            get() = Key
+
+        override fun updateThreadContext(context: CoroutineContext): ThreadContext.StoredContext =
+            threadContext.stashContext()
+
+        override fun restoreThreadContext(context: CoroutineContext, oldState: ThreadContext.StoredContext) =
+            oldState.restore()
     }
 
     /**
@@ -189,11 +226,15 @@ object DefaultChannelInitializer {
      * Checks whether the exception indicates the document already exists.
      * This can happen when the index is still recovering and the existence check
      * returns a false negative, but the subsequent insert finds the document.
+     *
+     * The first-startup path goes through the remote metadata SDK, which reports the conflict as an
+     * [OpenSearchStatusException] with [RestStatus.CONFLICT] instead of the engine's exception.
      */
-    private fun isDocumentAlreadyExists(e: Exception): Boolean {
+    internal fun isDocumentAlreadyExists(e: Exception): Boolean {
         var current: Throwable? = e
         while (current != null) {
             if (current is VersionConflictEngineException) return true
+            if (current is OpenSearchStatusException && current.status() == RestStatus.CONFLICT) return true
             current = current.cause
         }
         return false
