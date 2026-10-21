@@ -185,9 +185,7 @@ function parse_args() {
                     log "Error: --stage requires a value."
                     usage
                 fi
-                # Lowercased here, at the boundary, so every downstream write sees the canonical
-                # form: VERSION.json, the workflow references and the tag they pin
-                # (v{version}-{stage}) must all agree, and git refs are case-sensitive.
+                # Lowercase here; git refs are case-sensitive and VERSION.json must match.
                 arg_stage="${2,,}"
                 shift 2
                 ;;

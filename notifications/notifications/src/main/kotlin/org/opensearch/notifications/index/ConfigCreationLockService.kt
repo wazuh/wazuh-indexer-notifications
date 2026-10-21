@@ -77,13 +77,9 @@ internal object ConfigCreationLockService {
      * blocking a transport thread for half a minute, while stale-theft stays reserved for locks
      * orphaned by a crashed or partitioned node (see [stealIfStale]).
      *
-     * The threshold also has to exceed the work it protects, or a live holder could be robbed
-     * mid-flight and two callers would count-and-create at once. It does, by a wide margin: the
-     * critical section is two `size(0)` counts and one index request over an index capped at
-     * `plugins.notifications.max_notification_configs` documents (40 by default), so it completes
-     * in milliseconds. `operationTimeoutMs` (60 s) bounds each of those calls, but that is a
-     * ceiling for a cluster already failing to answer a trivial search, not an expected duration --
-     * and in that state one config over the limit is not the problem worth solving here.
+     * It also has to exceed the work it protects, and does: the critical section is two `size(0)`
+     * counts and one index request over an index capped at 40 configs by default, so it runs in
+     * milliseconds.
      */
     private const val MAX_ACQUIRE_RETRIES = 20
     private const val ACQUIRE_RETRY_BACKOFF_MS = 100L

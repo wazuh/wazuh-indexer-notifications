@@ -54,16 +54,7 @@ function build_prior_versions() {
         [[ "$t_major" != "$major" ]] && continue
         rest="${stripped#*.}"
         t_minor="${rest%%.*}"
-        # Drop the minors released after the one being bumped to. Without this, a bump on a
-        # maintenance branch advertises its successors as "prior": bumping 5.0.2 while 5.1 and
-        # 5.2 are tagged would pick minors 2 and 1.
-        #
-        # Later minors only -- the bumped version's own minor stays. Releasing 5.2.1 must still
-        # link v5.2.0, which is the release right before it and whose CHANGELOG this one replaces;
-        # the exact tag being bumped to is dropped by the check below.
-        #
-        # 10# forces base 10 so a zero-padded minor is not read as octal, which under `set -e`
-        # would abort the script.
+        # Skip minors released after this one; its own minor stays. 10# avoids octal.
         (( 10#$t_minor > 10#$target_minor )) && continue
         [[ "$stripped" == "$version" ]] && continue
         t_patch="${rest#*.}"
