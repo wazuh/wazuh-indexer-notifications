@@ -173,11 +173,20 @@ function parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --version)
+                if [[ $# -lt 2 || "$2" == --* ]]; then
+                    log "Error: --version requires a value."
+                    usage
+                fi
                 arg_version="$2"
                 shift 2
                 ;;
             --stage)
-                arg_stage="$2"
+                if [[ $# -lt 2 || "$2" == --* ]]; then
+                    log "Error: --stage requires a value."
+                    usage
+                fi
+                # Lowercase here; git refs are case-sensitive and VERSION.json must match.
+                arg_stage="${2,,}"
                 shift 2
                 ;;
             --tag)
