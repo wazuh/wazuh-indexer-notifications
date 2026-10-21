@@ -65,6 +65,26 @@ internal object ConfigCreationLockService {
     private const val SETTINGS_FILE_NAME = "notifications-config-locks-settings.yml"
     private const val LOCK_ID = "notification-config-creation"
     private const val ACQUIRED_AT_FIELD = "acquired_at"
+
+    /**
+     * The retry window and the stale threshold are intentionally different orders of magnitude:
+     * - One [acquire] call backs off for at most [MAX_ACQUIRE_RETRIES] * [ACQUIRE_RETRY_BACKOFF_MS]
+     *   (~2 seconds) before giving up.
+     * - [STALE_THRESHOLD_MS] (30 seconds) is far larger, so a lock held by a live node is never
+     *   stolen during a single acquire loop; only a lock that was already stale on entry is.
+     *
+     * This is deliberate. Acquisition fast-fails so callers surface backpressure instead of
+     * blocking a transport thread for half a minute, while stale-theft stays reserved for locks
+     * orphaned by a crashed or partitioned node (see [stealIfStale]).
+     *
+     * The threshold also has to exceed the work it protects, or a live holder could be robbed
+     * mid-flight and two callers would count-and-create at once. It does, by a wide margin: the
+     * critical section is two `size(0)` counts and one index request over an index capped at
+     * `plugins.notifications.max_notification_configs` documents (40 by default), so it completes
+     * in milliseconds. `operationTimeoutMs` (60 s) bounds each of those calls, but that is a
+     * ceiling for a cluster already failing to answer a trivial search, not an expected duration --
+     * and in that state one config over the limit is not the problem worth solving here.
+     */
     private const val MAX_ACQUIRE_RETRIES = 20
     private const val ACQUIRE_RETRY_BACKOFF_MS = 100L
     private const val STALE_THRESHOLD_MS = 30_000L
