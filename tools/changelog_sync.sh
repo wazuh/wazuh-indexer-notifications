@@ -39,6 +39,8 @@ function fetch_stable_tags() {
 function build_prior_versions() {
     local version="$1"
     local major="${version%%.*}"
+    local after_major="${version#*.}"
+    local target_minor="${after_major%%.*}"
 
     local tags
     tags="$(fetch_stable_tags)"
@@ -52,6 +54,8 @@ function build_prior_versions() {
         [[ "$t_major" != "$major" ]] && continue
         rest="${stripped#*.}"
         t_minor="${rest%%.*}"
+        # Skip minors released after this one; its own minor stays. 10# avoids octal.
+        (( 10#$t_minor > 10#$target_minor )) && continue
         [[ "$stripped" == "$version" ]] && continue
         t_patch="${rest#*.}"
         grouped+="${t_minor}\t${t_patch}\t${name}\n"
