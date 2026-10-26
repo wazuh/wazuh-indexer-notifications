@@ -76,6 +76,13 @@ internal object ConfigCreationLockService {
      * This is deliberate. Acquisition fast-fails so callers surface backpressure instead of
      * blocking a transport thread for half a minute, while stale-theft stays reserved for locks
      * orphaned by a crashed or partitioned node (see [stealIfStale]).
+     *
+     * It should also exceed the work it protects. Normally it does: the critical section is two
+     * `size(0)` counts and one index request over an index capped at 40 configs by default, so it
+     * runs in milliseconds. It is not bounded, though: each of those calls may take up to
+     * `operationTimeoutMs` (60 seconds by default). On a slow cluster the lock can be stolen from
+     * a live holder, letting one extra config past the limit. This is accepted over a longer
+     * threshold, which would block config creation for minutes after a node dies holding the lock.
      */
     private const val MAX_ACQUIRE_RETRIES = 20
     private const val ACQUIRE_RETRY_BACKOFF_MS = 100L
