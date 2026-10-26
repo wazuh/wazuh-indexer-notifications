@@ -185,7 +185,8 @@ function parse_args() {
                     log "Error: --stage requires a value."
                     usage
                 fi
-                arg_stage="$2"
+                # Lowercase here; git refs are case-sensitive and VERSION.json must match.
+                arg_stage="${2,,}"
                 shift 2
                 ;;
             --tag)

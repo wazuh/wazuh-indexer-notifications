@@ -16,10 +16,22 @@
  */
 package org.opensearch.notifications.index
 
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.junit.jupiter.api.Test
+import org.opensearch.OpenSearchStatusException
+import org.opensearch.common.settings.Settings
+import org.opensearch.common.util.concurrent.ThreadContext
+import org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT
 import org.opensearch.commons.notifications.model.ConfigType
+import org.opensearch.core.index.shard.ShardId
+import org.opensearch.core.rest.RestStatus
+import org.opensearch.index.engine.VersionConflictEngineException
+import java.util.concurrent.Executors
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DefaultChannelInitializerTests {
@@ -87,5 +99,78 @@ class DefaultChannelInitializerTests {
                 "Channel ${channel.id} should have config data"
             )
         }
+    }
+
+    @Test
+    fun `test initialization does not run as the user left on the thread`() {
+        val threadContext = ThreadContext(Settings.EMPTY)
+        threadContext.putTransient(OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT, STALE_USER)
+
+        runBlocking(DefaultChannelInitializer.StashedThreadContext(threadContext)) {
+            assertNull(threadContext.getTransient<String>(OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT))
+        }
+        assertEquals(STALE_USER, threadContext.getTransient(OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT))
+    }
+
+    @Test
+    fun `test initialization context does not leak when the coroutine changes threads`() {
+        val threadContext = ThreadContext(Settings.EMPTY)
+        val first = Executors.newSingleThreadExecutor()
+        val second = Executors.newSingleThreadExecutor()
+        try {
+            first.submit { threadContext.putTransient(OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT, STALE_USER) }.get()
+            val seen = mutableListOf<String?>()
+            runBlocking {
+                withContext(first.asCoroutineDispatcher() + DefaultChannelInitializer.StashedThreadContext(threadContext)) {
+                    seen += threadContext.getTransient<String>(OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT)
+                    withContext(second.asCoroutineDispatcher()) {
+                        seen += threadContext.getTransient<String>(OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT)
+                    }
+                    seen += threadContext.getTransient<String>(OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT)
+                }
+            }
+            assertEquals(listOf<String?>(null, null, null), seen)
+            assertEquals(
+                STALE_USER,
+                first.submit<String?> { threadContext.getTransient(OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT) }.get()
+            )
+            assertNull(second.submit<String?> { threadContext.getTransient(OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT) }.get())
+        } finally {
+            first.shutdownNow()
+            second.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `test conflict reported by the metadata SDK counts as already existing`() {
+        val sdkConflict = OpenSearchStatusException(
+            "Document version conflict putting default_slack_channel in index .opensearch-notifications-config",
+            RestStatus.CONFLICT
+        )
+        assertTrue(DefaultChannelInitializer.isDocumentAlreadyExists(sdkConflict))
+    }
+
+    @Test
+    fun `test engine version conflict counts as already existing`() {
+        val engineConflict = VersionConflictEngineException(
+            ShardId(".opensearch-notifications-config", "_na_", 0),
+            "default_slack_channel",
+            "document already exists (current version [1])"
+        )
+        assertTrue(DefaultChannelInitializer.isDocumentAlreadyExists(RuntimeException(engineConflict)))
+    }
+
+    @Test
+    fun `test other failures do not count as already existing`() {
+        assertFalse(
+            DefaultChannelInitializer.isDocumentAlreadyExists(
+                OpenSearchStatusException("no permissions", RestStatus.FORBIDDEN)
+            )
+        )
+        assertFalse(DefaultChannelInitializer.isDocumentAlreadyExists(IllegalStateException("boom")))
+    }
+
+    private companion object {
+        const val STALE_USER = "kibanaserver||"
     }
 }
