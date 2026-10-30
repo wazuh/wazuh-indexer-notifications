@@ -24,6 +24,5 @@
 
 | Issue | Comment |
 |-------|---------|
-| [#2017](https://github.com/wazuh/wazuh-indexer/issues/2017) | Skip existing default notification channels without an `ERROR` when a new cluster manager is elected |
 
 ## Prior versions
