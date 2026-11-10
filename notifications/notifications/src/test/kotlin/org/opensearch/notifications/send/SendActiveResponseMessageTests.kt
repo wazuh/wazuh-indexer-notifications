@@ -89,12 +89,12 @@ internal class SendActiveResponseMessageTests {
     }
 
     @Test
-    fun `source document is read from the primary shard`() {
+    fun `source document is read from the primary shard, falling back to a replica`() {
         send(location = "all", alertSource = alertWithoutWazuh())
 
         val requests = mutableListOf<GetRequest>()
         verify(exactly = 1) { client.get(capture(requests)) }
-        assertEquals("_primary", requests.single().preference())
+        assertEquals("_primary_first", requests.single().preference())
     }
 
     @Test

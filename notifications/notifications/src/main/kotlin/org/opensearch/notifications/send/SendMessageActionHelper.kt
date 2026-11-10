@@ -414,9 +414,10 @@ object SendMessageActionHelper {
     }
 
     private fun fetchSourceDocument(docId: String, indexName: String): Map<String, Any?> {
-        // Read from the primary: replica copies can lag behind and answer found=false for a document
-        // that was just written, which would silently drop the Active Response.
-        val getRequest = org.opensearch.action.get.GetRequest(indexName, docId).preference("_primary")
+        // Prefer the primary: replica copies can lag behind and answer found=false for a document that was
+        // just written, which would silently drop the Active Response. Fall back to a replica when the
+        // primary is unavailable, so a failing or not yet reassigned primary does not fail the GET outright.
+        val getRequest = org.opensearch.action.get.GetRequest(indexName, docId).preference("_primary_first")
         val getResponse = client.get(getRequest).actionGet()
 
         if (!getResponse.isExists || getResponse.sourceAsMap == null) {
