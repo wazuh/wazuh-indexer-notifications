@@ -24,5 +24,6 @@
 
 | Issue | Comment |
 |-------|---------|
+| [#229](https://github.com/wazuh/wazuh-indexer-notifications/issues/229) | Read the Active Response source document from the primary shard, retry on not found, and add a prepare-failure metric |
 
 ## Prior versions

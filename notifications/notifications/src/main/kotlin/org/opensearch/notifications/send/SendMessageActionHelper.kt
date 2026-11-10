@@ -71,6 +71,12 @@ object SendMessageActionHelper {
     /** Field of the copied alert the manager reads the target agent from for [LOCATION_LOCAL]. */
     private const val AGENT_ID_FIELD = "wazuh.agent.id"
 
+    /** Total attempts to read the alert document before giving up on a NOT_FOUND. */
+    internal const val SOURCE_DOCUMENT_MAX_ATTEMPTS = 3
+
+    /** Base backoff between attempts; the n-th retry waits n times this value. */
+    internal var sourceDocumentBackoffMillis = 200L
+
     private lateinit var configOperations: ConfigOperations
     private lateinit var userAccess: UserAccess
     private lateinit var client: org.opensearch.notifications.util.SecureIndexClient
@@ -353,6 +359,7 @@ object SendMessageActionHelper {
             log.debug("$LOG_PREFIX:sendActiveResponseMessage Queued active response for docId=$docId indexName=$indexName")
             eventStatus.copy(deliveryStatus = DeliveryStatus(RestStatus.OK.status.toString(), "Active response queued for bulk indexing"))
         } catch (exception: Exception) {
+            Metrics.NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE_PREPARE_FAILED.counter.increment()
             log.error("$LOG_PREFIX:sendActiveResponseMessage Failed to prepare active response document for docId=$docId indexName=$indexName", exception)
             eventStatus.copy(
                 deliveryStatus = DeliveryStatus(
@@ -387,7 +394,29 @@ object SendMessageActionHelper {
 
     // Wazuh
     private fun getSourceDocument(docId: String, indexName: String): Map<String, Any?> {
-        val getRequest = org.opensearch.action.get.GetRequest(indexName, docId)
+        var attempt = 1
+        while (true) {
+            try {
+                return fetchSourceDocument(docId, indexName)
+            } catch (exception: OpenSearchStatusException) {
+                if (exception.status() != RestStatus.NOT_FOUND || attempt >= SOURCE_DOCUMENT_MAX_ATTEMPTS) {
+                    throw exception
+                }
+                log.warn(
+                    "$LOG_PREFIX:getSourceDocument Document [$docId] not found in index [$indexName] " +
+                        "(attempt $attempt/$SOURCE_DOCUMENT_MAX_ATTEMPTS), retrying"
+                )
+                // The caller is already blocking on the GET (actionGet), so a short blocking backoff is consistent.
+                Thread.sleep(sourceDocumentBackoffMillis * attempt)
+                attempt++
+            }
+        }
+    }
+
+    private fun fetchSourceDocument(docId: String, indexName: String): Map<String, Any?> {
+        // Read from the primary: replica copies can lag behind and answer found=false for a document
+        // that was just written, which would silently drop the Active Response.
+        val getRequest = org.opensearch.action.get.GetRequest(indexName, docId).preference("_primary")
         val getResponse = client.get(getRequest).actionGet()
 
         if (!getResponse.isExists || getResponse.sourceAsMap == null) {
