@@ -40,6 +40,7 @@ import org.opensearch.commons.notifications.model.NotificationConfig
 import org.opensearch.commons.notifications.model.SeverityType
 import org.opensearch.core.rest.RestStatus
 import org.opensearch.notifications.index.ConfigOperations
+import org.opensearch.notifications.metrics.Metrics
 import org.opensearch.notifications.model.DocInfo
 import org.opensearch.notifications.model.DocMetadata
 import org.opensearch.notifications.model.NotificationConfigDoc
@@ -84,6 +85,61 @@ internal class SendActiveResponseMessageTests {
         every { userAccess.doesUserHaveAccess(any(), any()) } returns true
 
         SendMessageActionHelper.initialize(configOperations, userAccess, client, bulkIndexer)
+        SendMessageActionHelper.sourceDocumentBackoffMillis = 0L
+    }
+
+    @Test
+    fun `source document is read from the primary shard, falling back to a replica`() {
+        send(location = "all", alertSource = alertWithoutWazuh())
+
+        val requests = mutableListOf<GetRequest>()
+        verify(exactly = 1) { client.get(capture(requests)) }
+        assertEquals("_primary_first", requests.single().preference())
+    }
+
+    @Test
+    fun `missing source document is retried and then queued once it appears`() {
+        val missing = mockk<GetResponse>()
+        every { missing.isExists } returns false
+        every { missing.sourceAsMap } returns null
+        val found = mockk<GetResponse>()
+        every { found.isExists } returns true
+        every { found.sourceAsMap } returns alertWithoutWazuh()
+        val future = mockk<ActionFuture<GetResponse>>()
+        every { future.actionGet() } returnsMany listOf(missing, missing, found)
+        coEvery { configOperations.getNotificationConfig(channelId) } returns channelConfig("all", null)
+        every { client.get(any<GetRequest>()) } returns future
+
+        val response = runSend()
+
+        assertEquals(
+            RestStatus.OK.status.toString(),
+            response.notificationEvent.statusList.single().deliveryStatus?.statusCode
+        )
+        verify(exactly = 3) { client.get(any<GetRequest>()) }
+        verify(exactly = 1) { bulkIndexer.add(any()) }
+    }
+
+    @Test
+    fun `exhausted retries report failure, increment the metric and queue nothing`() {
+        val missing = mockk<GetResponse>()
+        every { missing.isExists } returns false
+        every { missing.sourceAsMap } returns null
+        val future = mockk<ActionFuture<GetResponse>>()
+        every { future.actionGet() } returns missing
+        coEvery { configOperations.getNotificationConfig(channelId) } returns channelConfig("all", null)
+        every { client.get(any<GetRequest>()) } returns future
+        val before = Metrics.NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE_PREPARE_FAILED.counter.getValue()
+
+        val exception = assertFailsWith<OpenSearchStatusException> { runSend() }
+
+        assertTrue(exception.message!!.contains("\"status_code\":\"424\""), "was: ${exception.message}")
+        verify(exactly = SendMessageActionHelper.SOURCE_DOCUMENT_MAX_ATTEMPTS) { client.get(any<GetRequest>()) }
+        verify(exactly = 0) { bulkIndexer.add(any()) }
+        assertEquals(
+            before + 1,
+            Metrics.NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE_PREPARE_FAILED.counter.getValue()
+        )
     }
 
     @Test
@@ -227,6 +283,10 @@ internal class SendActiveResponseMessageTests {
     ): SendNotificationResponse {
         coEvery { configOperations.getNotificationConfig(channelId) } returns channelConfig(location, agentId)
         stubAlert(alertSource)
+        return runSend()
+    }
+
+    private fun runSend(): SendNotificationResponse {
         return runBlocking {
             SendMessageActionHelper.executeRequest(
                 SendNotificationRequest(

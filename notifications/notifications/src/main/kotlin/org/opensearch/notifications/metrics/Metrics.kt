@@ -220,6 +220,10 @@ enum class Metrics(val metricName: String, val counter: Counter<*>) {
     NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE_BULK_FAILED(
         "notifications.message_destination.active_response.bulk_failed",
         RollingCounter()
+    ),
+    NOTIFICATIONS_MESSAGE_DESTINATION_ACTIVE_RESPONSE_PREPARE_FAILED(
+        "notifications.message_destination.active_response.prepare_failed",
+        BasicCounter()
     ), // add specific user errors for send message operations
 
     // Send Test Message Endpoints
