@@ -18,11 +18,14 @@ package org.opensearch.notifications.index
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.opensearch.action.DocWriteResponse
+import org.opensearch.action.admin.indices.create.CreateIndexRequest
+import org.opensearch.action.admin.indices.create.CreateIndexResponse
 import org.opensearch.action.delete.DeleteRequest
 import org.opensearch.action.delete.DeleteResponse
 import org.opensearch.action.get.GetResponse
@@ -30,6 +33,7 @@ import org.opensearch.action.index.IndexRequest
 import org.opensearch.action.index.IndexResponse
 import org.opensearch.action.support.replication.ReplicationResponse
 import org.opensearch.cluster.ClusterState
+import org.opensearch.cluster.metadata.IndexMetadata
 import org.opensearch.cluster.routing.RoutingTable
 import org.opensearch.cluster.service.ClusterService
 import org.opensearch.common.settings.Settings
@@ -171,6 +175,21 @@ internal class ConfigCreationLockServiceTests {
         }
     }
 
+    @Test
+    fun `test the lock index is created with a replica as soon as a second node joins`() {
+        val client = fakeClient()
+        val created = slot<CreateIndexRequest>()
+        every { client.admin().indices().create(capture(created), any<ActionListener<CreateIndexResponse>>()) } answers {
+            secondArg<ActionListener<CreateIndexResponse>>()
+                .onResponse(CreateIndexResponse(true, true, ConfigCreationLockService.INDEX_NAME))
+        }
+        ConfigCreationLockService.initialize(client, fakeClusterService(lockIndexExists = false))
+
+        runBlocking { ConfigCreationLockService.acquire() }
+
+        assertEquals("0-1", created.captured.settings().get(IndexMetadata.SETTING_AUTO_EXPAND_REPLICAS))
+    }
+
     /** Puts a lock document in place as though it had been acquired [ageMs] ago. */
     private fun seedLockAged(ageMs: Long): StoredLock {
         val lock = StoredLock(Instant.now().toEpochMilli() - ageMs, nextSeqNo++)
@@ -178,9 +197,9 @@ internal class ConfigCreationLockServiceTests {
         return lock
     }
 
-    private fun fakeClusterService(): ClusterService {
+    private fun fakeClusterService(lockIndexExists: Boolean = true): ClusterService {
         val routingTable = mockk<RoutingTable>()
-        every { routingTable.hasIndex(any<String>()) } returns true
+        every { routingTable.hasIndex(any<String>()) } returns lockIndexExists
         val clusterState = mockk<ClusterState>()
         every { clusterState.routingTable } returns routingTable
         val clusterService = mockk<ClusterService>()
